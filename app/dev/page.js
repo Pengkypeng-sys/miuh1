@@ -12,7 +12,9 @@ export default function DevPage() {
   const [loading, setLoading] = useState(false);
 
   async function buka() {
+    if (!passcode) return;
     setLoading(true);
+    setStatus(null);
     const res = await fetch('/api/dev/license', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode }),
@@ -26,6 +28,7 @@ export default function DevPage() {
 
   async function simpan() {
     setLoading(true);
+    setStatus(null);
     const res = await fetch('/api/dev/license', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ passcode, tanggalExpiry: tanggalBaru }),
@@ -35,45 +38,113 @@ export default function DevPage() {
     if (res.sukses) setTanggalExpiry(tanggalBaru);
   }
 
+  const hariTersisa = tanggalExpiry ? Math.ceil((new Date(`${tanggalExpiry}T23:59:59+07:00`) - new Date()) / 86400000) : null;
+
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#0f172a', fontFamily: 'system-ui, sans-serif', padding: 20,
-    }}>
-      <div style={{ background: '#1e293b', borderRadius: 14, padding: 32, maxWidth: 360, width: '100%', color: '#e2e8f0' }}>
-        <div style={{ fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Developer Only</div>
-        <h2 style={{ margin: '0 0 20px', fontSize: 18 }}>Pengaturan Lisensi</h2>
+    <div className="dev-shell">
+      <style>{`
+        .dev-shell {
+          min-height: 100vh; display: flex; align-items: center; justify-content: center;
+          background: radial-gradient(circle at 30% 20%, #0f2e1c 0%, #060f0a 55%, #030805 100%);
+          font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px;
+        }
+        .dev-card {
+          background: rgba(15,23,20,0.75); border: 1px solid rgba(52,211,153,0.15);
+          border-radius: 18px; padding: 36px; max-width: 380px; width: 100%;
+          box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+          backdrop-filter: blur(12px);
+          animation: devFadeIn .35s cubic-bezier(.22,1,.36,1);
+        }
+        @keyframes devFadeIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .dev-lock {
+          width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 18px;
+          background: linear-gradient(135deg, #15803d, #0b5c2d);
+          display: flex; align-items: center; justify-content: center; font-size: 22px;
+          box-shadow: 0 8px 20px rgba(21,128,61,0.4);
+        }
+        .dev-eyebrow {
+          text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
+          color: #4ade80; text-transform: uppercase; margin-bottom: 6px;
+        }
+        .dev-title { text-align: center; font-size: 19px; font-weight: 700; color: #f0fdf4; margin: 0 0 26px; }
+        .dev-label { font-size: 12px; color: #86efac; margin-bottom: 8px; display: block; font-weight: 600; }
+        .dev-input {
+          width: 100%; padding: 12px 14px; border-radius: 10px;
+          border: 1.5px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3);
+          color: #f0fdf4; font-size: 14px; margin-bottom: 16px; transition: border-color .15s, background .15s;
+        }
+        .dev-input:focus { outline: none; border-color: #22c55e; background: rgba(0,0,0,0.45); }
+        .dev-input::placeholder { color: #4b5f52; }
+        .dev-btn {
+          width: 100%; padding: 13px; border-radius: 10px; border: none; cursor: pointer;
+          font-size: 14px; font-weight: 700; transition: transform .1s, box-shadow .15s;
+        }
+        .dev-btn:active { transform: scale(.98); }
+        .dev-btn-primary { background: linear-gradient(135deg, #16a34a, #15803d); color: white; box-shadow: 0 8px 20px rgba(21,128,61,0.35); }
+        .dev-btn-primary:hover { box-shadow: 0 10px 26px rgba(21,128,61,0.5); }
+        .dev-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .dev-info-row {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 12px 14px; border-radius: 10px; background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.06); margin-bottom: 18px;
+        }
+        .dev-info-row .k { font-size: 11.5px; color: #86efac; }
+        .dev-info-row .v { font-size: 13px; font-weight: 700; color: #f0fdf4; }
+        .dev-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .dev-badge.ok { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .dev-badge.warn { background: rgba(234,179,8,0.15); color: #facc15; }
+        .dev-badge.bad { background: rgba(239,68,68,0.15); color: #f87171; }
+        .dev-status { margin-top: 14px; padding: 11px 14px; border-radius: 10px; font-size: 13px; animation: devFadeIn .2s ease; }
+        .dev-status.ok { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+        .dev-status.bad { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+        .dev-spin {
+          display: inline-block; width: 13px; height: 13px; border: 2px solid currentColor;
+          border-right-color: transparent; border-radius: 999px; animation: devSpin .6s linear infinite;
+          margin-right: 6px; vertical-align: -2px;
+        }
+        @keyframes devSpin { to { transform: rotate(360deg); } }
+      `}</style>
+
+      <div className="dev-card">
+        <div className="dev-lock">🔐</div>
+        <div className="dev-eyebrow">Developer Only</div>
+        <h2 className="dev-title">Pengaturan Lisensi</h2>
 
         {!unlocked ? (
           <>
+            <label className="dev-label">Passcode</label>
             <input
-              type="password" placeholder="Passcode developer" value={passcode}
+              className="dev-input" type="password" placeholder="••••••••" value={passcode}
               onChange={e => setPasscode(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && buka()}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: 'white', marginBottom: 12 }}
+              autoFocus
             />
-            <button onClick={buka} disabled={loading} style={{ width: '100%', padding: 11, borderRadius: 8, border: 'none', background: '#4f46e5', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
-              {loading ? 'Cek...' : 'Buka'}
+            <button className="dev-btn dev-btn-primary" onClick={buka} disabled={loading}>
+              {loading ? <><span className="dev-spin" />Memeriksa...</> : 'Buka'}
             </button>
           </>
         ) : (
           <>
-            <label style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>Tanggal expiry saat ini: <b>{tanggalExpiry}</b></label>
+            <div className="dev-info-row">
+              <span className="k">Status saat ini</span>
+              <span className={`dev-badge ${hariTersisa < 0 ? 'bad' : hariTersisa <= 7 ? 'warn' : 'ok'}`}>
+                {hariTersisa < 0 ? 'Expired' : `${hariTersisa} hari lagi`}
+              </span>
+            </div>
+
+            <label className="dev-label">Tanggal Expiry Baru</label>
             <input
-              type="date" value={tanggalBaru} onChange={e => setTanggalBaru(e.target.value)}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #334155', background: '#0f172a', color: 'white', marginBottom: 12 }}
+              className="dev-input" type="date" value={tanggalBaru}
+              onChange={e => setTanggalBaru(e.target.value)}
+              style={{ colorScheme: 'dark' }}
             />
-            <button onClick={simpan} disabled={loading} style={{ width: '100%', padding: 11, borderRadius: 8, border: 'none', background: '#16a34a', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
-              {loading ? 'Menyimpan...' : 'Simpan Tanggal Baru'}
+            <button className="dev-btn dev-btn-primary" onClick={simpan} disabled={loading}>
+              {loading ? <><span className="dev-spin" />Menyimpan...</> : 'Simpan Tanggal Baru'}
             </button>
           </>
         )}
 
-        {status && (
-          <div style={{ marginTop: 14, padding: 10, borderRadius: 8, fontSize: 13, background: status.ok ? '#166534' : '#991b1b' }}>
-            {status.pesan}
-          </div>
-        )}
+        {status && <div className={`dev-status ${status.ok ? 'ok' : 'bad'}`}>{status.pesan}</div>}
       </div>
     </div>
   );
