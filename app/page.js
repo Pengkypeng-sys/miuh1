@@ -61,6 +61,18 @@ export default function Home() {
   const [kolom, setKolom] = useState('');
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [nominalPerItem, setNominalPerItem] = useState({});
+  const [ppdbOn, setPpdbOn] = useState(false);
+  const [ppdbGel, setPpdbGel] = useState('');
+  const [ppdbGender, setPpdbGender] = useState('');
+  const [ppdbNominal, setPpdbNominal] = useState('');
+  const [bukuOn, setBukuOn] = useState(false);
+  const [bukuKelasPilih, setBukuKelasPilih] = useState('');
+  const [bukuNominal, setBukuNominal] = useState('');
+  const [sppOn, setSppOn] = useState(false);
+  const [sppNominal, setSppNominal] = useState('');
+  const [tabunganOn, setTabunganOn] = useState(false);
+  const [tabunganNominal, setTabunganNominal] = useState('');
+  const BUKU_KELAS_MAP = { 'KELAS 1': 'BUKU 1', 'KELAS 2': 'BUKU 1', 'KELAS 3': 'BUKU 2', 'KELAS 4': 'BUKU 2', 'KELAS 5': 'BUKU 3', 'KELAS 6': 'BUKU 3' };
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
@@ -83,6 +95,7 @@ export default function Home() {
   const [cariSiswaKelola, setCariSiswaKelola] = useState('');
   const [namaItemBaru, setNamaItemBaru] = useState('');
   const [targetItemBaru, setTargetItemBaru] = useState('');
+  const [kelasItemBaru, setKelasItemBaru] = useState([]);
   const [statusItem, setStatusItem] = useState(null);
   const [loadingItem, setLoadingItem] = useState(false);
   const [editItemNama, setEditItemNama] = useState(null);
@@ -139,7 +152,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!kelas) return;
-    fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setSiswaList(list); setSiswa(list[0] || ''); });
+    fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { const l = Array.isArray(list) ? list : []; setSiswaList(l); setSiswa(l[0] || ''); });
     fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
   }, [kelas]);
 
@@ -175,7 +188,14 @@ export default function Home() {
 
   async function doLogin() {
     if (!username.trim() || !password.trim()) { alert('Isi username dan password'); return; }
-    const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }).then(r => r.json());
+    let res;
+    try {
+      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      res = await r.json();
+    } catch {
+      setLoginMsg('Koneksi ke server gagal, coba lagi');
+      return;
+    }
     if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); return; }
     if (res.sukses) {
       setNama(res.nama); setRole(res.role); setLoggedIn(true); setLoginMsg(null);
@@ -194,6 +214,16 @@ export default function Home() {
     const data = await fetch('/api/rekap').then(r => r.json());
     setRekap(data);
   }
+
+  // auto-refresh tab yang lagi aktif tiap 15 detik, biar data selalu up-to-date tanpa klik Refresh manual
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (tab === 'rekap') { loadRekap(); if (kelasDetailPilih) loadKelasDetail(); }
+      else if (tab === 'kas') loadKas();
+      else if (tab === 'log') loadLog();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [tab, kelasDetailPilih, tanggalKas, tanggalLog]);
 
   useEffect(() => {
     if (tab !== 'rekap' || !kelasDetailPilih) return;
@@ -245,15 +275,34 @@ export default function Home() {
   }
 
   async function submitData() {
-    const daftarBayar = Array.from(checkedItems).filter(k => onlyDigits(nominalPerItem[k] || ''));
+    const daftarBayar = Array.from(checkedItems)
+      .filter(k => onlyDigits(nominalPerItem[k] || ''))
+      .map(k => ({ kolom: k, nominal: onlyDigits(nominalPerItem[k]), mode: modePerItem[k] || 'tambah' }));
+
+    if (ppdbOn && ppdbGel && ppdbGender && onlyDigits(ppdbNominal)) {
+      const item = itemList.find(i => i.nama === 'PPDB');
+      const keterangan = `GEL.${ppdbGel} ${ppdbGender === 'L' ? 'LAKI-LAKI' : 'PEREMPUAN'}`;
+      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(ppdbNominal), mode: 'tambah', keterangan });
+    }
+    if (bukuOn && bukuKelasPilih && onlyDigits(bukuNominal)) {
+      const item = itemList.find(i => i.nama === 'BUKU');
+      const keterangan = BUKU_KELAS_MAP[bukuKelasPilih];
+      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(bukuNominal), mode: 'tambah', keterangan });
+    }
+    if (sppOn && onlyDigits(sppNominal)) {
+      const item = itemList.find(i => i.nama === 'SPP');
+      const total = (Number(onlyDigits(sppNominal)) || 0) + (tabunganOn ? (Number(onlyDigits(tabunganNominal)) || 0) : 0);
+      if (item && total) daftarBayar.push({ kolom: item.kolom, nominal: String(total), mode: 'tambah' });
+    }
+
     if (daftarBayar.length === 0) { alert('Centang minimal 1 item dan isi nominalnya'); return; }
 
     setLoadingBtn(true);
     const hasil = [];
-    for (const k of daftarBayar) {
+    for (const { kolom: k, nominal, mode, keterangan } of daftarBayar) {
       const res = await fetch('/api/payment', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kelas, siswa, kolom: k, nominal: onlyDigits(nominalPerItem[k]), metode: metodeBayar, mode: modePerItem[k] || 'tambah' }),
+        body: JSON.stringify({ kelas, siswa, kolom: k, nominal, metode: metodeBayar, mode, keterangan }),
       }).then(r => r.json());
       if (cekSessionExpired(res)) { setLoadingBtn(false); return; }
       hasil.push(res);
@@ -272,6 +321,9 @@ export default function Home() {
     setCheckedItems(new Set());
     setNominalPerItem({});
     setModePerItem({});
+    setPpdbOn(false); setPpdbGel(''); setPpdbGender(''); setPpdbNominal('');
+    setBukuOn(false); setBukuKelasPilih(''); setBukuNominal('');
+    setSppOn(false); setSppNominal(''); setTabunganOn(false); setTabunganNominal('');
   }
 
   function hapusData() {
@@ -329,12 +381,12 @@ export default function Home() {
   async function tambahItem() {
     if (!namaItemBaru.trim() || !targetItemBaru) { alert('Isi nama item dan target harga dulu'); return; }
     setLoadingItem(true);
-    const res = await fetch('/api/item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: namaItemBaru, target: onlyDigits(targetItemBaru) }) }).then(r => r.json());
+    const res = await fetch('/api/item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: namaItemBaru, target: onlyDigits(targetItemBaru), kelas: kelasItemBaru }) }).then(r => r.json());
     setLoadingItem(false);
     if (cekSessionExpired(res)) return;
     setStatusItem(res);
     if (res.sukses) {
-      setNamaItemBaru(''); setTargetItemBaru('');
+      setNamaItemBaru(''); setTargetItemBaru(''); setKelasItemBaru([]);
       fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
     }
   }
@@ -528,7 +580,93 @@ export default function Home() {
 
                 <label>Item yang Dibayar <span style={{ fontWeight: 'normal', color: 'var(--muted)' }}>(nominal &lt;1000 otomatis dikali 1000)</span></label>
                 <div className="checkout-list">
-                  {itemList.map(i => {
+                  <div className="checkout-row">
+                    <label className="checkout-check">
+                      <input type="checkbox" checked={ppdbOn} onChange={e => { setPpdbOn(e.target.checked); if (!e.target.checked) { setPpdbGel(''); setPpdbGender(''); setPpdbNominal(''); } }} />
+                      <span className="nm">PPDB</span>
+                    </label>
+                    {ppdbOn && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                        <select value={ppdbGel} onChange={e => setPpdbGel(e.target.value)}>
+                          <option value="">Pilih Gelombang</option>
+                          <option value="1">Gel.1</option>
+                          <option value="2">Gel.2</option>
+                          <option value="3">Gel.3</option>
+                        </select>
+                        <select value={ppdbGender} onChange={e => setPpdbGender(e.target.value)}>
+                          <option value="">Pilih Jenis Kelamin</option>
+                          <option value="L">Laki-laki</option>
+                          <option value="P">Perempuan</option>
+                        </select>
+                        {ppdbGel && ppdbGender && (
+                          <input
+                            type="text" inputMode="numeric" className="checkout-nominal"
+                            placeholder="nominal PPDB"
+                            value={ppdbNominal}
+                            onChange={e => setPpdbNominal(formatRibuan(e.target.value))}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="checkout-row">
+                    <label className="checkout-check">
+                      <input type="checkbox" checked={bukuOn} onChange={e => { setBukuOn(e.target.checked); if (!e.target.checked) { setBukuKelasPilih(''); setBukuNominal(''); } }} />
+                      <span className="nm">BUKU</span>
+                    </label>
+                    {bukuOn && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
+                          {Object.keys(BUKU_KELAS_MAP).map(k => (
+                            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400 }}>
+                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
+                              {k}
+                            </label>
+                          ))}
+                        </div>
+                        {bukuKelasPilih && (
+                          <input
+                            type="text" inputMode="numeric" className="checkout-nominal"
+                            placeholder={`nominal ${BUKU_KELAS_MAP[bukuKelasPilih]}`}
+                            value={bukuNominal}
+                            onChange={e => setBukuNominal(formatRibuan(e.target.value))}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="checkout-row">
+                    <label className="checkout-check">
+                      <input type="checkbox" checked={sppOn} onChange={e => { setSppOn(e.target.checked); if (!e.target.checked) { setSppNominal(''); setTabunganOn(false); setTabunganNominal(''); } }} />
+                      <span className="nm">SPP</span>
+                    </label>
+                    {sppOn && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                        <input
+                          type="text" inputMode="numeric" className="checkout-nominal"
+                          placeholder="nominal SPP"
+                          value={sppNominal}
+                          onChange={e => setSppNominal(formatRibuan(e.target.value))}
+                        />
+                        <label className="mode-toggle" style={{ width: '100%' }}>
+                          <input type="checkbox" checked={tabunganOn} onChange={e => { setTabunganOn(e.target.checked); if (!e.target.checked) setTabunganNominal(''); }} />
+                          Sertakan Tabungan Wajib
+                        </label>
+                        {tabunganOn && (
+                          <input
+                            type="text" inputMode="numeric" className="checkout-nominal"
+                            placeholder="nominal Tabungan Wajib"
+                            value={tabunganNominal}
+                            onChange={e => setTabunganNominal(formatRibuan(e.target.value))}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {itemList.filter(i => i.nama !== 'PPDB' && i.nama !== 'BUKU' && i.nama !== 'SPP').map(i => {
                     const checked = checkedItems.has(i.kolom);
                     const val = Number(itemValues[i.kolom]) || 0;
                     const status = hitungStatus(val, i.target);
@@ -725,6 +863,21 @@ export default function Home() {
                   <div>
                     <label>Target Harga</label>
                     <input type="text" inputMode="numeric" value={targetItemBaru} onChange={e => setTargetItemBaru(formatRibuan(e.target.value))} placeholder="contoh: 200.000" />
+                  </div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <label>Kelas (kosongkan = semua kelas)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
+                    {kelasList.map(k => (
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400 }}>
+                        <input
+                          type="checkbox"
+                          checked={kelasItemBaru.includes(k)}
+                          onChange={e => setKelasItemBaru(prev => e.target.checked ? [...prev, k] : prev.filter(x => x !== k))}
+                        />
+                        {k}
+                      </label>
+                    ))}
                   </div>
                 </div>
                 <button disabled={loadingItem} onClick={tambahItem} className="btn-icon" style={{ maxWidth: 260 }}>

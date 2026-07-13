@@ -134,7 +134,7 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; }
 .main-topbar h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: -0.015em; display: flex; align-items: center; gap: 9px; }
 .main-topbar h1 .ic-badge { width: 30px; height: 30px; border-radius: 9px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
 .main-topbar .desc { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
-.main-content { padding: 28px 32px; max-width: 1160px; animation: fadeSlide .3s cubic-bezier(.22,1,.36,1); }
+.main-content { padding: 28px 32px; max-width: 1500px; animation: fadeSlide .3s cubic-bezier(.22,1,.36,1); }
 @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -184,7 +184,7 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; }
 .checkout-check input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; margin: 0; flex-shrink: 0; }
 .checkout-check .nm { font-weight: 600; color: #334155; flex: 1; }
 .checkout-check .status-chip { font-size: 9.5px !important; padding: 0 6px; }
-.checkout-nominal { margin: 0 0 8px !important; padding: 7px 10px !important; font-size: 12.5px !important; }
+.checkout-nominal { margin: 0 0 8px !important; padding: 10px 12px !important; font-size: 14px !important; }
 .mode-toggle { margin-bottom: 6px; }
 .mode-toggle { display: flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 11.5px; color: var(--muted); cursor: pointer; }
 .mode-toggle input { width: 14px; height: 14px; accent-color: var(--gold); cursor: pointer; margin: 0; }
@@ -231,14 +231,14 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; }
 .btnrow button { flex: 1; margin-top: 20px; }
 
 /* ===== PEMBAYARAN LAYOUT ===== */
-.bayar-grid { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 24px; align-items: start; }
+.bayar-grid { display: grid; grid-template-columns: minmax(380px, 620px) 1fr; gap: 24px; align-items: start; }
 @media (max-width: 900px) { .bayar-grid { grid-template-columns: 1fr; } }
 .siswa-card { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
 .siswa-card .avatar { width: 44px; height: 44px; border-radius: 999px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; }
 .siswa-card .nm { font-weight: 700; font-size: 15px; }
 .siswa-card .kl { font-size: 12.5px; color: var(--muted); }
 .item-status-list { display: flex; flex-direction: column; gap: 4px; }
-.item-status-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 9px; transition: background .15s, transform .1s; cursor: pointer; }
+.item-status-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; border-radius: 9px; transition: background .15s, transform .1s; cursor: pointer; }
 .item-status-row:active { transform: scale(0.99); }
 .status-chip { transition: transform .15s; }
 .item-status-row:hover .status-chip { transform: scale(1.05); }

@@ -23,14 +23,15 @@ export async function POST(req) {
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
   if (session.role !== 'admin') return NextResponse.json({ sukses: false, pesan: 'Hanya admin yang bisa menambah jenis pembayaran' });
 
-  const { nama, target } = await req.json();
+  const { nama, target, kelas } = await req.json();
   if (!nama || !nama.trim()) return NextResponse.json({ sukses: false, pesan: 'Nama item tidak boleh kosong' });
   const namaFinal = nama.trim().toUpperCase();
+  const kelasTerpilih = Array.isArray(kelas) && kelas.length ? kelas : null;
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${namaFinal}" ditambahkan (demo, gak tersimpan)` });
 
   try {
-    await addPaymentItem(namaFinal, target);
+    await addPaymentItem(namaFinal, target, kelasTerpilih);
   } catch (e) {
     return NextResponse.json({ sukses: false, pesan: e.message });
   }

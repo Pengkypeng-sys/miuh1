@@ -32,7 +32,7 @@ export async function POST(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Session habis, silakan login ulang', sessionExpired: true });
 
-  const { kelas, siswa, kolom, nominal, metode, mode } = await req.json();
+  const { kelas, siswa, kolom, nominal, metode, mode, keterangan } = await req.json();
   if (DEMO_MODE) {
     let v = Number(nominal);
     if (v > 0 && v < 1000) v = v * 1000;
@@ -51,21 +51,23 @@ export async function POST(req) {
   const totalBaru = isSet ? angka : oldValue + angka;
 
   await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [[totalBaru]]);
-  await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: true });
+  const pattern = keterangan ? `#,##0" (${keterangan})"` : null;
+  await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
 
   const tsCol = await getOrCreateTimestampColumn(kelas);
   await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[todayJakarta()]]);
 
   const targetMap = await getTargetMap();
   const status = hitungStatus(totalBaru, targetMap[itemName]);
+  const itemLabel = keterangan ? `${itemName} (${keterangan})` : itemName;
 
-  await logAction(session.username, isSet ? 'edit-langsung' : 'submit-pembayaran', kelas, siswa, itemName, oldValue, totalBaru, metode);
+  await logAction(session.username, isSet ? 'edit-langsung' : 'submit-pembayaran', kelas, siswa, itemLabel, oldValue, totalBaru, metode);
   return NextResponse.json({
     sukses: true,
     pesan: isSet
-      ? `${itemName}: nilai dikoreksi jadi Rp ${totalBaru.toLocaleString('id-ID')} (${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`
-      : `${itemName}: setor Rp ${angka.toLocaleString('id-ID')} (total Rp ${totalBaru.toLocaleString('id-ID')}, ${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`,
-    status, total: totalBaru, item: itemName,
+      ? `${itemLabel}: nilai dikoreksi jadi Rp ${totalBaru.toLocaleString('id-ID')} (${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`
+      : `${itemLabel}: setor Rp ${angka.toLocaleString('id-ID')} (total Rp ${totalBaru.toLocaleString('id-ID')}, ${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`,
+    status, total: totalBaru, item: itemLabel,
   });
 }
 
