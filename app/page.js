@@ -73,11 +73,12 @@ export default function Home() {
   const [tabunganOn, setTabunganOn] = useState(false);
   const [tabunganNominal, setTabunganNominal] = useState('');
   const BUKU_KELAS_MAP = { 'KELAS 1': 'BUKU 1', 'KELAS 2': 'BUKU 1', 'KELAS 3': 'BUKU 2', 'KELAS 4': 'BUKU 2', 'KELAS 5': 'BUKU 3', 'KELAS 6': 'BUKU 3' };
+  const PPDB_HARGA_ACUAN = { '1-L': 940000, '2-L': 1550000, '3-L': 1175000, '1-P': 1035000, '2-P': 1165000, '3-P': 1295000 };
+  const BUKU_HARGA_ACUAN = { 'KELAS 1': 400000, 'KELAS 2': 400000, 'KELAS 3': 480000, 'KELAS 4': 480000, 'KELAS 5': 475000, 'KELAS 6': 475000 };
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
   const [itemValues, setItemValues] = useState({});
-  const [cariSiswaBayar, setCariSiswaBayar] = useState('');
 
   function toggleCheckedItem(kolomItem) {
     setCheckedItems(prev => {
@@ -155,13 +156,6 @@ export default function Home() {
     fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { const l = Array.isArray(list) ? list : []; setSiswaList(l); setSiswa(l[0] || ''); });
     fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
   }, [kelas]);
-
-  // Kalau hasil pencarian bikin siswa yg lagi dipilih ilang dari daftar opsi, ikutin ke opsi pertama yang cocok
-  // (browser <select> ganti tampilan otomatis kalau opsi lama hilang, tapi gak trigger onChange — state React bisa nyangkut beda dari yang keliatan)
-  useEffect(() => {
-    const filtered = siswaList.filter(s => s.toLowerCase().includes(cariSiswaBayar.toLowerCase()));
-    if (filtered.length > 0 && !filtered.includes(siswa)) setSiswa(filtered[0]);
-  }, [cariSiswaBayar, siswaList]);
 
   useEffect(() => {
     if (!kelasSiswa) return;
@@ -565,16 +559,19 @@ export default function Home() {
                   {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
                 </select>
 
-                <label>Cari Nama Siswa</label>
+                <label>Nama Siswa</label>
                 <div className="search-box">
                   <span className="search-ic"><Icon name="search" size={15} /></span>
-                  <input value={cariSiswaBayar} onChange={e => setCariSiswaBayar(e.target.value)} placeholder="ketik nama siswa..." />
+                  <input
+                    list="daftar-siswa-bayar"
+                    value={siswa}
+                    onChange={e => setSiswa(e.target.value)}
+                    placeholder="ketik nama siswa..."
+                  />
                 </div>
-
-                <label style={{ marginTop: 10 }}>Pilih Nama Siswa</label>
-                <select value={siswa} onChange={e => setSiswa(e.target.value)}>
-                  {siswaList.filter(s => s.toLowerCase().includes(cariSiswaBayar.toLowerCase())).map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <datalist id="daftar-siswa-bayar">
+                  {siswaList.map(s => <option key={s} value={s} />)}
+                </datalist>
 
                 <hr className="field-divider" />
 
@@ -587,24 +584,35 @@ export default function Home() {
                     </label>
                     {ppdbOn && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
-                        <select value={ppdbGel} onChange={e => setPpdbGel(e.target.value)}>
+                        <select value={ppdbGel} onChange={e => {
+                          setPpdbGel(e.target.value);
+                          const acuan = PPDB_HARGA_ACUAN[`${e.target.value}-${ppdbGender}`];
+                          if (acuan) setPpdbNominal(formatRibuan(String(acuan)));
+                        }}>
                           <option value="">Pilih Gelombang</option>
                           <option value="1">Gel.1</option>
                           <option value="2">Gel.2</option>
                           <option value="3">Gel.3</option>
                         </select>
-                        <select value={ppdbGender} onChange={e => setPpdbGender(e.target.value)}>
+                        <select value={ppdbGender} onChange={e => {
+                          setPpdbGender(e.target.value);
+                          const acuan = PPDB_HARGA_ACUAN[`${ppdbGel}-${e.target.value}`];
+                          if (acuan) setPpdbNominal(formatRibuan(String(acuan)));
+                        }}>
                           <option value="">Pilih Jenis Kelamin</option>
                           <option value="L">Laki-laki</option>
                           <option value="P">Perempuan</option>
                         </select>
                         {ppdbGel && ppdbGender && (
-                          <input
-                            type="text" inputMode="numeric" className="checkout-nominal"
-                            placeholder="nominal PPDB"
-                            value={ppdbNominal}
-                            onChange={e => setPpdbNominal(formatRibuan(e.target.value))}
-                          />
+                          <>
+                            <input
+                              type="text" inputMode="numeric" className="checkout-nominal"
+                              placeholder="nominal PPDB"
+                              value={ppdbNominal}
+                              onChange={e => setPpdbNominal(formatRibuan(e.target.value))}
+                            />
+                            <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {PPDB_HARGA_ACUAN[`${ppdbGel}-${ppdbGender}`].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
+                          </>
                         )}
                       </div>
                     )}
@@ -620,18 +628,25 @@ export default function Home() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
                           {Object.keys(BUKU_KELAS_MAP).map(k => (
                             <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400 }}>
-                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
+                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => {
+                                const next = bukuKelasPilih === k ? '' : k;
+                                setBukuKelasPilih(next);
+                                if (next) setBukuNominal(formatRibuan(String(BUKU_HARGA_ACUAN[next])));
+                              }} />
                               {k}
                             </label>
                           ))}
                         </div>
                         {bukuKelasPilih && (
-                          <input
-                            type="text" inputMode="numeric" className="checkout-nominal"
-                            placeholder={`nominal ${BUKU_KELAS_MAP[bukuKelasPilih]}`}
-                            value={bukuNominal}
-                            onChange={e => setBukuNominal(formatRibuan(e.target.value))}
-                          />
+                          <>
+                            <input
+                              type="text" inputMode="numeric" className="checkout-nominal"
+                              placeholder={`nominal ${BUKU_KELAS_MAP[bukuKelasPilih]}`}
+                              value={bukuNominal}
+                              onChange={e => setBukuNominal(formatRibuan(e.target.value))}
+                            />
+                            <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {BUKU_HARGA_ACUAN[bukuKelasPilih].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
+                          </>
                         )}
                       </div>
                     )}
@@ -888,7 +903,8 @@ export default function Home() {
                 <div className="subsection-title">Jenis Pembayaran Aktif ({itemList.length})</div>
                 <div className="item-manage-list">
                   {itemList.map(i => (
-                    <div key={i.kolom} className="item-manage-row">
+                    <div key={i.kolom} className="item-manage-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                       <span className="nm">{i.nama}</span>
                       {editItemNama === i.nama ? (
                         <>
@@ -918,6 +934,18 @@ export default function Home() {
                           </button>
                         </>
                       )}
+                    </div>
+                    {i.nama === 'PPDB' && (
+                      <div className="hint-text" style={{ padding: '4px 0 2px' }}>
+                        Gel.1 L: Rp 940.000 &nbsp;·&nbsp; Gel.2 L: Rp 1.550.000 &nbsp;·&nbsp; Gel.3 L: Rp 1.175.000 &nbsp;·&nbsp;
+                        Gel.1 P: Rp 1.035.000 &nbsp;·&nbsp; Gel.2 P: Rp 1.165.000 &nbsp;·&nbsp; Gel.3 P: Rp 1.295.000
+                      </div>
+                    )}
+                    {i.nama === 'BUKU' && (
+                      <div className="hint-text" style={{ padding: '4px 0 2px' }}>
+                        BUKU 1 (Kelas 1-2): Rp 400.000 &nbsp;·&nbsp; BUKU 2 (Kelas 3-4): Rp 480.000 &nbsp;·&nbsp; BUKU 3 (Kelas 5-6): Rp 475.000
+                      </div>
+                    )}
                     </div>
                   ))}
                 </div>
