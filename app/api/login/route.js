@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues } from '@/lib/sheets';
+import { getValues, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
 import { hashPassword, signSession, setSessionCookie } from '@/lib/auth';
 import { DEMO_MODE, DEMO_USERS } from '@/lib/demoData';
 import { statusLisensi } from '@/lib/license';
@@ -23,7 +23,7 @@ export async function POST(req) {
     return NextResponse.json({ sukses: true, nama: u.nama, role: u.role, lisensi });
   }
 
-  const data = await getValues('Users!A2:D');
+  const data = await getValues('Users!A2:D', SYSTEM_SPREADSHEET_ID);
   const hashed = hashPassword(password);
   const row = data.find(r => String(r[0]) === String(username) && String(r[1]) === hashed);
 

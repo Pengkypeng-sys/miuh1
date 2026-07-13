@@ -5,6 +5,7 @@ import { useState } from 'react';
 // Akses: tau URL /dev + passcode (env var DEV_PASSCODE) — sepenuhnya di luar sistem role admin/staf.
 export default function DevPage() {
   const [passcode, setPasscode] = useState('');
+  const [showPasscode, setShowPasscode] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [tanggalExpiry, setTanggalExpiry] = useState('');
   const [tanggalBaru, setTanggalBaru] = useState('');
@@ -75,6 +76,14 @@ export default function DevPage() {
         }
         .dev-input:focus { outline: none; border-color: #22c55e; background: rgba(0,0,0,0.45); }
         .dev-input::placeholder { color: #4b5f52; }
+        .dev-password-wrap { position: relative; }
+        .dev-password-wrap .dev-input { padding-right: 42px; }
+        .dev-eye-btn {
+          position: absolute; right: 4px; top: 8px; width: 32px; height: 32px;
+          background: transparent; border: none; cursor: pointer; font-size: 15px;
+          display: flex; align-items: center; justify-content: center; border-radius: 7px;
+        }
+        .dev-eye-btn:hover { background: rgba(255,255,255,0.06); }
         .dev-btn {
           width: 100%; padding: 13px; border-radius: 10px; border: none; cursor: pointer;
           font-size: 14px; font-weight: 700; transition: transform .1s, box-shadow .15s;
@@ -113,12 +122,17 @@ export default function DevPage() {
         {!unlocked ? (
           <>
             <label className="dev-label">Passcode</label>
-            <input
-              className="dev-input" type="password" placeholder="••••••••" value={passcode}
-              onChange={e => setPasscode(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && buka()}
-              autoFocus
-            />
+            <div className="dev-password-wrap">
+              <input
+                className="dev-input" type={showPasscode ? 'text' : 'password'} placeholder="••••••••" value={passcode}
+                onChange={e => setPasscode(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && buka()}
+                autoFocus
+              />
+              <button type="button" className="dev-eye-btn" onClick={() => setShowPasscode(v => !v)} aria-label="Toggle passcode">
+                {showPasscode ? '🙈' : '👁️'}
+              </button>
+            </div>
             <button className="dev-btn dev-btn-primary" onClick={buka} disabled={loading}>
               {loading ? <><span className="dev-spin" />Memeriksa...</> : 'Buka'}
             </button>

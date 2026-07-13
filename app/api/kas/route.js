@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, appendRow, ensurePengeluaranSheet, ensureLogSheet } from '@/lib/sheets';
+import { getValues, appendRow, ensurePengeluaranSheet, ensureLogSheet, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -49,8 +49,8 @@ export async function GET(req) {
 
   await Promise.all([ensurePengeluaranSheet(), ensureLogSheet()]);
   const [logRows, pengeluaranRows] = await Promise.all([
-    getValues('Log!A2:I'),
-    getValues('Pengeluaran!A2:D'),
+    getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID),
+    getValues('Pengeluaran!A2:D', SYSTEM_SPREADSHEET_ID),
   ]);
 
   const transaksiMasuk = [];
@@ -97,7 +97,7 @@ export async function POST(req) {
 
   await ensurePengeluaranSheet();
   const { tanggal } = tanggalJakarta();
-  await appendRow('Pengeluaran', [tanggal, keterangan, Number(nominal), session.username], true);
+  await appendRow('Pengeluaran', [tanggal, keterangan, Number(nominal), session.username], true, SYSTEM_SPREADSHEET_ID);
 
   return NextResponse.json({ sukses: true, pesan: `Pengeluaran "${keterangan}" - Rp ${Number(nominal).toLocaleString('id-ID')} dicatat` });
 }

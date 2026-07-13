@@ -51,6 +51,7 @@ export default function Home() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginMsg, setLoginMsg] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [kelasList, setKelasList] = useState([]);
   const [kelas, setKelas] = useState('');
@@ -84,6 +85,8 @@ export default function Home() {
   const [targetItemBaru, setTargetItemBaru] = useState('');
   const [statusItem, setStatusItem] = useState(null);
   const [loadingItem, setLoadingItem] = useState(false);
+  const [editItemNama, setEditItemNama] = useState(null);
+  const [editItemTargetVal, setEditItemTargetVal] = useState('');
   const [cariSiswaDetail, setCariSiswaDetail] = useState('');
 
   const [rekap, setRekap] = useState(null);
@@ -336,6 +339,19 @@ export default function Home() {
     }
   }
 
+  async function simpanTargetItem(namaItem) {
+    if (!editItemTargetVal) { alert('Isi target harga dulu'); return; }
+    setLoadingItem(true);
+    const res = await fetch('/api/item', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: namaItem, target: onlyDigits(editItemTargetVal) }) }).then(r => r.json());
+    setLoadingItem(false);
+    if (cekSessionExpired(res)) return;
+    setStatusItem(res);
+    if (res.sukses) {
+      setEditItemNama(null);
+      fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setItemList);
+    }
+  }
+
   function hapusItem(namaItem) {
     askConfirm('Hapus Jenis Pembayaran', `Yakin hapus jenis pembayaran "${namaItem}"? Semua data pembayaran item ini di SEMUA kelas ikut terhapus permanen.`, async () => {
       setConfirmDialog(null);
@@ -374,7 +390,16 @@ export default function Home() {
           <label>Username</label>
           <input value={username} onChange={e => setUsername(e.target.value)} placeholder="username" />
           <label>Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="password" onKeyDown={e => e.key === 'Enter' && doLogin()} />
+          <div className="password-field">
+            <input
+              type={showPassword ? 'text' : 'password'} value={password}
+              onChange={e => setPassword(e.target.value)} placeholder="password"
+              onKeyDown={e => e.key === 'Enter' && doLogin()}
+            />
+            <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}>
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} size={17} />
+            </button>
+          </div>
           <button onClick={doLogin}>Masuk</button>
           {loginMsg && <div className="status gagal">{loginMsg}</div>}
         </div>
@@ -712,10 +737,34 @@ export default function Home() {
                   {itemList.map(i => (
                     <div key={i.kolom} className="item-manage-row">
                       <span className="nm">{i.nama}</span>
-                      <span className="target">{i.target ? rp(i.target) : 'tanpa target'}</span>
-                      <button className="ghost-danger btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => hapusItem(i.nama)}>
-                        <Icon name="trash" size={12} />
-                      </button>
+                      {editItemNama === i.nama ? (
+                        <>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editItemTargetVal}
+                            onChange={e => setEditItemTargetVal(formatRibuan(e.target.value))}
+                            placeholder="Target harga"
+                            style={{ width: 130 }}
+                          />
+                          <button className="btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => simpanTargetItem(i.nama)}>
+                            <Icon name="check" size={12} />
+                          </button>
+                          <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => setEditItemNama(null)}>
+                            <Icon name="minus" size={12} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="target">{i.target ? rp(i.target) : 'tanpa target'}</span>
+                          <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => { setEditItemNama(i.nama); setEditItemTargetVal(i.target ? formatRibuan(String(i.target)) : ''); }}>
+                            <Icon name="edit" size={12} />
+                          </button>
+                          <button className="ghost-danger btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => hapusItem(i.nama)}>
+                            <Icon name="trash" size={12} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -890,21 +939,6 @@ export default function Home() {
 
           {tab === 'rekap' && (
             <>
-              <div id="print-header">
-                <img src="/logo-mi.png" alt="" />
-                <div>
-                  <h2>MI Unwanul Huda 1</h2>
-                  <div>Laporan Rekap Pembayaran Siswa — dicetak {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-                </div>
-              </div>
-
-              <div className="report-toolbar no-print">
-                <div>
-                  <button className="secondary btn-icon" onClick={() => window.print()}><Icon name="receipt" size={15} /> Cetak / Simpan PDF</button>
-                  <div className="hint-text">Di jendela print, pilih tujuan "Save as PDF" buat download filenya</div>
-                </div>
-              </div>
-
               <div className="panel">
                 <div className="panel-header">
                   <div>

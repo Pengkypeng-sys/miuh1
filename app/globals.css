@@ -77,6 +77,16 @@ button.ghost-danger:hover { background: var(--danger-light); }
 .search-box { position: relative; margin-top: 6px; }
 .search-box input { padding-left: 34px; margin-top: 0; }
 .search-box .search-ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+.password-field { position: relative; margin-top: 6px; }
+.password-field input { padding-right: 40px; margin-top: 0; }
+.password-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; padding: 0; margin: 0; background: transparent;
+  border: none; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: 7px; transition: background .15s, color .15s;
+}
+.password-toggle:hover { background: #f1f5f9; color: var(--primary); }
 button:disabled { background: #cbd5e1; cursor: not-allowed; }
 .status { margin-top: 14px; padding: 11px; border-radius: 9px; text-align: center; font-size: 13px; font-weight: 500; }
 .sukses { background: var(--success-light); color: #166534; }
@@ -336,33 +346,6 @@ tfoot tr:hover { background: #f8fafc; }
 
 @media (max-width: 420px) {
   .stat-grid { grid-template-columns: 1fr; }
-}
-
-/* ===== LAPORAN: cetak & toolbar ===== */
-#print-header { display: none; }
-.report-toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
-.report-toolbar button { width: auto; margin-top: 0; }
-
-@media print {
-  .sidebar, .main-topbar, .mobile-menu-btn, .no-print { display: none !important; }
-  .collapsible summary { display: none !important; }
-  details:not([open]) > *:not(summary) { display: block !important; }
-  .collapsible .table-wrap { display: block !important; margin-top: 0; }
-  body, .bg { background: white !important; }
-  .app-shell { display: block; }
-  .main, .main-content { padding: 0 !important; margin: 0 !important; max-width: none !important; animation: none !important; }
-  .two-col-panels { grid-template-columns: 1fr !important; }
-  #print-header {
-    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
-    border-bottom: 2px solid #000; padding-bottom: 14px;
-  }
-  #print-header img { width: 52px; height: 52px; object-fit: contain; }
-  #print-header h2 { margin: 0; font-size: 16px; }
-  #print-header div div { font-size: 12px; color: #333; }
-  .panel { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; page-break-inside: avoid; margin-bottom: 14px !important; animation: none !important; }
-  .stat-tile { break-inside: avoid; animation: none !important; }
-  table { font-size: 11px; }
-  .status-chip { border: 1px solid #ddd; }
 }
 
 /* ===== KONFIRMASI HAPUS (modal custom) ===== */

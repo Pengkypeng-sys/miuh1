@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, ensureLogSheet } from '@/lib/sheets';
+import { getValues, ensureLogSheet, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -22,7 +22,7 @@ export async function GET(req) {
   const semua = tanggal === 'semua';
 
   await ensureLogSheet();
-  const rows = await getValues('Log!A2:I');
+  const rows = await getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID);
 
   let entries = rows
     .filter(r => typeof r[0] === 'string' && r[0])
