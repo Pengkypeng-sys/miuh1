@@ -42,6 +42,9 @@ export default function Home() {
   const [checking, setChecking] = useState(true);
   const [nama, setNama] = useState('');
   const [role, setRole] = useState('staf');
+  const [lisensiExpired, setLisensiExpired] = useState(false);
+  const [lisensiPesan, setLisensiPesan] = useState('');
+  const [lisensiPeringatan, setLisensiPeringatan] = useState(null);
   const [tab, setTab] = useState('bayar');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -111,7 +114,11 @@ export default function Home() {
 
   useEffect(() => {
     fetch('/api/session').then(r => r.json()).then(res => {
-      if (res.sukses) { setNama(res.nama); setRole(res.role); setLoggedIn(true); }
+      if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); setChecking(false); return; }
+      if (res.sukses) {
+        setNama(res.nama); setRole(res.role); setLoggedIn(true);
+        if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
+      }
       setChecking(false);
     });
   }, []);
@@ -166,8 +173,10 @@ export default function Home() {
   async function doLogin() {
     if (!username.trim() || !password.trim()) { alert('Isi username dan password'); return; }
     const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }).then(r => r.json());
+    if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); return; }
     if (res.sukses) {
       setNama(res.nama); setRole(res.role); setLoggedIn(true); setLoginMsg(null);
+      if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
     } else {
       setLoginMsg(res.pesan);
     }
@@ -343,6 +352,18 @@ export default function Home() {
 
   if (checking) return null;
 
+  if (lisensiExpired) {
+    return (
+      <div className="login-shell">
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div className="license-lock-icon">🔒</div>
+          <h2>Masa Aktif Habis</h2>
+          <div className="subtitle" style={{ marginBottom: 0 }}>{lisensiPesan}</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!loggedIn) {
     return (
       <div className="login-shell">
@@ -427,6 +448,12 @@ export default function Home() {
             <div className="desc">{meta.desc}</div>
           </div>
         </div>
+
+        {lisensiPeringatan && (
+          <div className="license-warning no-print">
+            ⚠️ Masa aktif dashboard tinggal <b>{lisensiPeringatan.hariTersisa} hari</b> (sampai {lisensiPeringatan.tanggalExpiry}) — hubungi admin buat perpanjang.
+          </div>
+        )}
 
         <div className="main-content" key={tab}>
           {tab === 'rekap' && (

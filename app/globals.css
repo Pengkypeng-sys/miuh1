@@ -400,3 +400,10 @@ tfoot tr:hover { background: #f8fafc; }
 .bar-fill { transition: width .6s cubic-bezier(.22,1,.36,1); }
 .logo-img { transition: transform .3s; }
 .sidebar-brand:hover .logo-img { transform: rotate(-6deg) scale(1.08); }
+
+.license-lock-icon { font-size: 40px; margin-bottom: 10px; }
+.license-warning {
+  background: var(--gold-light); color: #8a6511; border-bottom: 1px solid #f3e2ae;
+  padding: 10px 32px; font-size: 13px; text-align: center;
+}
+@media (max-width: 720px) { .license-warning { padding: 10px 16px; font-size: 12px; } }
