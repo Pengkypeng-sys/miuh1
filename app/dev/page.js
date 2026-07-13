@@ -42,7 +42,7 @@ export default function DevPage() {
 
   return (
     <div className="dev-shell">
-      <style>{`
+      <style jsx>{`
         .dev-shell {
           min-height: 100vh; display: flex; align-items: center; justify-content: center;
           background: radial-gradient(circle at 30% 20%, #0f2e1c 0%, #060f0a 55%, #030805 100%);
