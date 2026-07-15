@@ -26,12 +26,14 @@ export async function GET(req) {
 
   const header = rows[0];
   const tsColIdx = header.indexOf('Terakhir Diisi');
+  const angkatanIdx = header.indexOf('Angkatan');
+  const itemColStartIdx = angkatanIdx !== -1 ? angkatanIdx + 2 : 2; // lewatin kolom Angkatan kalau ada
   const itemColEndIdx = tsColIdx !== -1 ? tsColIdx : header.length;
   const targetMap = await getTargetMap();
 
   const items = header
     .map((nama, i) => ({ nama, kolom: i + 1, target: targetMap[nama] || 0 }))
-    .filter(h => h.kolom >= 2 && h.kolom <= itemColEndIdx && h.nama);
+    .filter(h => h.kolom >= itemColStartIdx && h.kolom <= itemColEndIdx && h.nama);
 
   const siswa = rows.slice(1)
     .filter(r => r[0])

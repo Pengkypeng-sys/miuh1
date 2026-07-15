@@ -14,7 +14,7 @@ export async function GET(req) {
   const targetMap = await getTargetMap();
   const items = header
     .map((nama, i) => ({ nama, kolom: i + 1, target: targetMap[nama] || 0 }))
-    .filter(h => h.kolom >= 2 && h.nama && h.nama !== 'Terakhir Diisi');
+    .filter(h => h.kolom >= 2 && h.nama && h.nama !== 'Terakhir Diisi' && h.nama !== 'Angkatan');
   return NextResponse.json(items);
 }
 

@@ -126,6 +126,8 @@ export default function Home() {
   const [pindahKeKolom, setPindahKeKolom] = useState('');
   const [pindahNominal, setPindahNominal] = useState('');
   const [loadingPindah, setLoadingPindah] = useState(false);
+  const [loadingKenaikan, setLoadingKenaikan] = useState(false);
+  const [statusKenaikan, setStatusKenaikan] = useState(null);
 
   function askConfirm(title, message, onConfirm) {
     setConfirmDialog({ title, message, onConfirm });
@@ -415,6 +417,24 @@ export default function Home() {
     });
   }
 
+  function kenaikanKelas() {
+    askConfirm(
+      'Kenaikan Kelas Tahunan',
+      'Ini bakal mindahin SEMUA siswa: KELAS 1→2→3→4→5→6→ALUMNI, sekaligus. Data pembayaran (termasuk tunggakan) ikut pindah utuh, gak dihapus. KELAS 1 bakal kosong siap diisi siswa baru. Aksi ini gak bisa dibatalin gampang — yakin lanjut?',
+      async () => {
+        setConfirmDialog(null);
+        setLoadingKenaikan(true);
+        const res = await fetch('/api/kenaikan-kelas', { method: 'POST' }).then(r => r.json());
+        setLoadingKenaikan(false);
+        if (cekSessionExpired(res)) return;
+        setStatusKenaikan(res);
+        if (res.sukses) {
+          fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
+        }
+      }
+    );
+  }
+
   if (checking) return null;
 
   if (lisensiExpired) {
@@ -630,7 +650,7 @@ export default function Home() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
                           {Object.keys(BUKU_KELAS_MAP).map(k => (
-                            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400 }}>
+                            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
                               <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => {
                                 const next = bukuKelasPilih === k ? '' : k;
                                 setBukuKelasPilih(next);
@@ -897,9 +917,9 @@ export default function Home() {
                 </div>
                 <div style={{ marginTop: 10 }}>
                   <label>Kelas (kosongkan = semua kelas)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 6 }}>
                     {kelasList.map(k => (
-                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400 }}>
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
                         <input
                           type="checkbox"
                           checked={kelasItemBaru.includes(k)}
@@ -965,6 +985,25 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+
+              {role === 'admin' && (
+                <div className="panel" style={{ gridColumn: '1 / -1' }}>
+                  <div className="panel-title"><span className="ic-badge"><Icon name="up" size={14} /></span> Kenaikan Kelas Tahunan</div>
+                  <div className="panel-desc">
+                    Sekali klik pindahin SEMUA siswa: KELAS 1→2→3→4→5→6→ALUMNI. Data pembayaran (termasuk tunggakan) ikut pindah, gak dihapus.
+                    KELAS 1 jadi kosong, siap diisi siswa baru.
+                  </div>
+                  <button className="ghost-danger btn-icon" style={{ maxWidth: 300 }} disabled={loadingKenaikan} onClick={kenaikanKelas}>
+                    {loadingKenaikan ? <span className="spinner" /> : <Icon name="up" size={15} />} Jalankan Kenaikan Kelas
+                  </button>
+                  {statusKenaikan && (
+                    <div className={`status ${statusKenaikan.sukses ? 'sukses' : 'gagal'}`}>
+                      {statusKenaikan.pesan}
+                      {statusKenaikan.ringkasan?.map((r, i) => <div key={i} style={{ fontSize: 12, marginTop: 4 }}>{r}</div>)}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

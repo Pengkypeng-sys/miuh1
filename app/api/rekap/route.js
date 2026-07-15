@@ -26,7 +26,8 @@ export async function GET() {
 
     const header = rows[0];
     const tsColIdx = header.indexOf('Terakhir Diisi'); // 0-based, -1 kalau belum ada
-    const itemColStartIdx = 1; // kolom B (0-based idx 1)
+    const angkatanIdx = header.indexOf('Angkatan');
+    const itemColStartIdx = angkatanIdx !== -1 ? angkatanIdx + 1 : 1; // lewatin kolom Angkatan kalau ada
     const itemColEndIdx = tsColIdx !== -1 ? tsColIdx : header.length; // exclusive, 0-based
 
     header.forEach((nama, i) => {

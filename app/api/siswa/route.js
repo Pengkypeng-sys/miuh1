@@ -29,7 +29,9 @@ export async function POST(req) {
   const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
   if (existing.includes(namaFinal)) return NextResponse.json({ sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' });
 
-  await appendRow(kelas, [namaFinal]);
+  const header = (await getValues(`${kelas}!1:1`))[0] || [];
+  const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
+  await appendRow(kelas, row);
   await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
   return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` });
 }
