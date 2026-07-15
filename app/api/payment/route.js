@@ -55,7 +55,7 @@ export async function POST(req) {
   await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
 
   const tsCol = await getOrCreateTimestampColumn(kelas);
-  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[todayJakarta()]]);
+  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[todayJakarta()]], true);
 
   const targetMap = await getTargetMap();
   const status = hitungStatus(totalBaru, targetMap[itemName]);

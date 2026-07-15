@@ -69,9 +69,11 @@ export default function Home() {
   const [bukuKelasPilih, setBukuKelasPilih] = useState('');
   const [bukuNominal, setBukuNominal] = useState('');
   const [sppOn, setSppOn] = useState(false);
+  const [sppBulan, setSppBulan] = useState([]);
   const [sppNominal, setSppNominal] = useState('');
   const [tabunganOn, setTabunganOn] = useState(false);
   const [tabunganNominal, setTabunganNominal] = useState('');
+  const BULAN_LIST = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
   const BUKU_KELAS_MAP = { 'KELAS 1': 'BUKU 1', 'KELAS 2': 'BUKU 1', 'KELAS 3': 'BUKU 2', 'KELAS 4': 'BUKU 2', 'KELAS 5': 'BUKU 3', 'KELAS 6': 'BUKU 3' };
   const PPDB_HARGA_ACUAN = { '1-L': 940000, '2-L': 1550000, '3-L': 1175000, '1-P': 1035000, '2-P': 1165000, '3-P': 1295000 };
   const BUKU_HARGA_ACUAN = { 'KELAS 1': 400000, 'KELAS 2': 400000, 'KELAS 3': 480000, 'KELAS 4': 480000, 'KELAS 5': 475000, 'KELAS 6': 475000 };
@@ -286,7 +288,8 @@ export default function Home() {
     if (sppOn && onlyDigits(sppNominal)) {
       const item = itemList.find(i => i.nama === 'SPP');
       const total = (Number(onlyDigits(sppNominal)) || 0) + (tabunganOn ? (Number(onlyDigits(tabunganNominal)) || 0) : 0);
-      if (item && total) daftarBayar.push({ kolom: item.kolom, nominal: String(total), mode: 'tambah' });
+      const keterangan = sppBulan.length ? `Bulan ${sppBulan.join(', ')}` : undefined;
+      if (item && total) daftarBayar.push({ kolom: item.kolom, nominal: String(total), mode: 'tambah', keterangan });
     }
 
     if (daftarBayar.length === 0) { alert('Centang minimal 1 item dan isi nominalnya'); return; }
@@ -317,7 +320,7 @@ export default function Home() {
     setModePerItem({});
     setPpdbOn(false); setPpdbGel(''); setPpdbGender(''); setPpdbNominal('');
     setBukuOn(false); setBukuKelasPilih(''); setBukuNominal('');
-    setSppOn(false); setSppNominal(''); setTabunganOn(false); setTabunganNominal('');
+    setSppOn(false); setSppBulan([]); setSppNominal(''); setTabunganOn(false); setTabunganNominal('');
   }
 
   function hapusData() {
@@ -654,11 +657,23 @@ export default function Home() {
 
                   <div className="checkout-row">
                     <label className="checkout-check">
-                      <input type="checkbox" checked={sppOn} onChange={e => { setSppOn(e.target.checked); if (!e.target.checked) { setSppNominal(''); setTabunganOn(false); setTabunganNominal(''); } }} />
+                      <input type="checkbox" checked={sppOn} onChange={e => { setSppOn(e.target.checked); if (!e.target.checked) { setSppBulan([]); setSppNominal(''); setTabunganOn(false); setTabunganNominal(''); } }} />
                       <span className="nm">SPP</span>
                     </label>
                     {sppOn && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
+                          {BULAN_LIST.map(b => (
+                            <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400 }}>
+                              <input
+                                type="checkbox"
+                                checked={sppBulan.includes(b)}
+                                onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
+                              />
+                              {b}
+                            </label>
+                          ))}
+                        </div>
                         <input
                           type="text" inputMode="numeric" className="checkout-nominal"
                           placeholder="nominal SPP"
