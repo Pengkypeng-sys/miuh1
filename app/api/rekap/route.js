@@ -78,7 +78,9 @@ export async function GET(req) {
         itemCols.forEach(kolom => {
           const val = r[kolom - 1];
           if (val !== '' && val !== undefined && val !== null) {
-            bayarHariIni.push({ kelas, siswa: nama, item: header[kolom - 1], nominal: Number(val) || 0 });
+            const label = varianCols.includes(kolom) ? labelsByCol[kolom][ri] : '';
+            const item = label ? `${header[kolom - 1]} (${label})` : header[kolom - 1];
+            bayarHariIni.push({ kelas, siswa: nama, item, nominal: Number(val) || 0 });
           }
         });
       }

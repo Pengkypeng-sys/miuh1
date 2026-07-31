@@ -59,7 +59,10 @@ export async function POST(req) {
 
   const targetMap = await getTargetMap();
   const status = hitungStatus(totalBaru, targetMap[itemName]);
-  const itemLabel = keterangan ? `${itemName} (${keterangan})` : itemName;
+  // Hindari label dobel kayak "BUKU (BUKU 2)" — kalau keterangan udah mulai sama nama item, tampilin keterangannya aja
+  const itemLabel = keterangan
+    ? (keterangan.toUpperCase().startsWith(itemName.toUpperCase()) ? keterangan : `${itemName} (${keterangan})`)
+    : itemName;
 
   await logAction(session.username, isSet ? 'edit-langsung' : 'submit-pembayaran', kelas, siswa, itemLabel, oldValue, totalBaru, metode);
   return NextResponse.json({
