@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, appendRow, deleteRow, withLock } from '@/lib/sheets';
+import { getValues, appendRow, deleteRow, withLock, isKelasValid } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE, DEMO_SISWA } from '@/lib/demoData';
@@ -10,6 +10,7 @@ export async function GET(req) {
 
   const kelas = new URL(req.url).searchParams.get('kelas');
   if (DEMO_MODE) return NextResponse.json((DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id')));
+  if (!(await isKelasValid(kelas))) return NextResponse.json([]);
 
   try {
     const data = await getValues(`${kelas}!A2:A`);
@@ -30,6 +31,7 @@ export async function POST(req) {
   const namaFinal = nama.trim().toUpperCase();
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas} (demo, gak tersimpan)` });
+  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
     // Lock per kelas — cegah 2 request tambah-siswa bareng (klik dobel/refresh cepat) lolos
@@ -59,6 +61,7 @@ export async function DELETE(req) {
 
   const { kelas, nama } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus (demo, gak tersimpan)` });
+  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
     const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);

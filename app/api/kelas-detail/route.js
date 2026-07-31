@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, getTargetMap, getColumnLabels, colToLetter } from '@/lib/sheets';
+import { getValues, getTargetMap, getColumnLabels, colToLetter, isKelasValid } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { hitungStatus } from '@/lib/target';
 import { DEMO_MODE, DEMO_SISWA, DEMO_ITEMS } from '@/lib/demoData';
@@ -20,6 +20,8 @@ export async function GET(req) {
       .sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
     return NextResponse.json({ items: DEMO_ITEMS, siswa });
   }
+
+  if (!(await isKelasValid(kelas))) return NextResponse.json({ items: [], siswa: [] });
 
   try {
     const rows = await getValues(`${kelas}!A1:Z`);

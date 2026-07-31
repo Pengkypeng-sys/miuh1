@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, getTargetMap, addPaymentItem, deletePaymentItem, updatePaymentItemTarget } from '@/lib/sheets';
+import { getValues, getTargetMap, addPaymentItem, deletePaymentItem, updatePaymentItemTarget, isKelasValid } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE, DEMO_ITEMS } from '@/lib/demoData';
 
@@ -10,6 +10,8 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_ITEMS);
 
   const kelas = new URL(req.url).searchParams.get('kelas');
+  if (!(await isKelasValid(kelas))) return NextResponse.json([]);
+
   const header = (await getValues(`${kelas}!1:1`))[0] || [];
   const targetMap = await getTargetMap();
   const items = header

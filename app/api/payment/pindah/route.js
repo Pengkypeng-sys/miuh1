@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, findRow } from '@/lib/sheets';
+import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, findRow, isKelasValid } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { logAction, tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -16,6 +16,7 @@ export async function POST(req) {
   }
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pembayaran dipindahkan (demo, gak tersimpan)' });
+  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
     const row = await findRow(kelas, siswa);

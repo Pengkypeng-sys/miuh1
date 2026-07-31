@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, getRowLabels } from '@/lib/sheets';
+import { getValues, getRowLabels, isKelasValid } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE } from '@/lib/demoData';
 
@@ -13,6 +13,7 @@ export async function GET(req) {
   const kelas = params.get('kelas'), siswa = params.get('siswa');
 
   if (DEMO_MODE) return NextResponse.json({});
+  if (!(await isKelasValid(kelas))) return NextResponse.json({});
 
   const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
   const idx = names.indexOf(siswa);
