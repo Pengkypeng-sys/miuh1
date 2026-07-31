@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, appendRow, deleteRow } from '@/lib/sheets';
+import { getValues, appendRow, deleteRow, withLock } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE, DEMO_SISWA } from '@/lib/demoData';
@@ -26,14 +26,20 @@ export async function POST(req) {
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas} (demo, gak tersimpan)` });
 
-  const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-  if (existing.includes(namaFinal)) return NextResponse.json({ sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' });
+  // Lock per kelas — cegah 2 request tambah-siswa bareng (klik dobel/refresh cepat) lolos
+  // validasi nama-udah-ada bersamaan terus sama-sama nambah baris duplikat.
+  const result = await withLock(`siswa-${kelas}`, async () => {
+    const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
+    if (existing.includes(namaFinal)) return { sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' };
 
-  const header = (await getValues(`${kelas}!1:1`))[0] || [];
-  const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
-  await appendRow(kelas, row);
-  await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
-  return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` });
+    const header = (await getValues(`${kelas}!1:1`))[0] || [];
+    const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
+    await appendRow(kelas, row);
+    return { sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` };
+  });
+
+  if (result.sukses) await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
+  return NextResponse.json(result);
 }
 
 export async function DELETE(req) {

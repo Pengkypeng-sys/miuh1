@@ -181,6 +181,8 @@ export default function Home() {
   const [pindahKeKolom, setPindahKeKolom] = useState('');
   const [pindahNominal, setPindahNominal] = useState('');
   const [loadingPindah, setLoadingPindah] = useState(false);
+  const [loadingSiswa, setLoadingSiswa] = useState(false);
+  const [loadingPengeluaran, setLoadingPengeluaran] = useState(false);
   const [loadingKenaikan, setLoadingKenaikan] = useState(false);
   const [statusKenaikan, setStatusKenaikan] = useState(null);
 
@@ -320,8 +322,11 @@ export default function Home() {
   }
 
   async function tambahPengeluaran() {
+    if (loadingPengeluaran) return; // cegah double-submit (klik dobel/cepat)
     if (!ketPengeluaran.trim() || !nominalPengeluaran) { alert('Isi keterangan dan nominal dulu'); return; }
+    setLoadingPengeluaran(true);
     const res = await fetch('/api/kas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keterangan: ketPengeluaran, nominal: onlyDigits(nominalPengeluaran) }) }).then(r => r.json());
+    setLoadingPengeluaran(false);
     if (cekSessionExpired(res)) return;
     setStatusKas(res);
     if (res.sukses) {
@@ -412,8 +417,11 @@ export default function Home() {
   }
 
   async function tambahSiswa() {
+    if (loadingSiswa) return; // cegah double-submit (klik dobel/cepat)
     if (!namaBaru.trim()) { alert('Isi nama siswa dulu'); return; }
+    setLoadingSiswa(true);
     const res = await fetch('/api/siswa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas: kelasSiswa, nama: namaBaru }) }).then(r => r.json());
+    setLoadingSiswa(false);
     if (cekSessionExpired(res)) return;
     setStatusSiswa(res);
     if (res.sukses) {
@@ -426,8 +434,11 @@ export default function Home() {
   function hapusSiswa() {
     if (!siswaHapus) { alert('Pilih siswa dulu'); return; }
     askConfirm('Hapus Siswa', `Yakin hapus ${siswaHapus} dari ${kelasSiswa}? Semua data pembayarannya ikut terhapus.`, async () => {
+      if (loadingSiswa) return;
       setConfirmDialog(null);
+      setLoadingSiswa(true);
       const res = await fetch('/api/siswa', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas: kelasSiswa, nama: siswaHapus }) }).then(r => r.json());
+      setLoadingSiswa(false);
       if (cekSessionExpired(res)) return;
       setStatusSiswa(res);
       fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
@@ -928,7 +939,9 @@ export default function Home() {
 
                 <label>Tambah Nama Siswa Baru</label>
                 <input value={namaBaru} onChange={e => setNamaBaru(e.target.value)} placeholder="Nama siswa baru" onKeyDown={e => e.key === 'Enter' && tambahSiswa()} />
-                <button onClick={tambahSiswa} className="btn-icon"><Icon name="plus" size={15} /> Tambah Siswa</button>
+                <button disabled={loadingSiswa} onClick={tambahSiswa} className="btn-icon">
+                  {loadingSiswa ? <span className="spinner" /> : <Icon name="plus" size={15} />} Tambah Siswa
+                </button>
 
                 <hr className="field-divider" />
 
@@ -936,7 +949,9 @@ export default function Home() {
                 <select value={siswaHapus} onChange={e => setSiswaHapus(e.target.value)}>
                   {siswaHapusList.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <button className="ghost-danger btn-icon" style={{ width: '100%' }} onClick={hapusSiswa}><Icon name="trash" size={14} /> Hapus Siswa Ini</button>
+                <button disabled={loadingSiswa} className="ghost-danger btn-icon" style={{ width: '100%' }} onClick={hapusSiswa}>
+                  {loadingSiswa ? <span className="spinner" /> : <Icon name="trash" size={14} />} Hapus Siswa Ini
+                </button>
 
                 {statusSiswa && <div className={`status ${statusSiswa.sukses ? 'sukses' : 'gagal'}`}>{statusSiswa.pesan}</div>}
               </div>
@@ -1172,7 +1187,9 @@ export default function Home() {
                   <label>Nominal</label>
                   <input type="text" inputMode="numeric" value={nominalPengeluaran} onChange={e => setNominalPengeluaran(formatRibuan(e.target.value))} placeholder="contoh: 150.000" />
 
-                  <button className="danger btn-icon" onClick={tambahPengeluaran}><Icon name="minus" size={15} /> Catat Pengeluaran</button>
+                  <button disabled={loadingPengeluaran} className="danger btn-icon" onClick={tambahPengeluaran}>
+                    {loadingPengeluaran ? <span className="spinner" /> : <Icon name="minus" size={15} />} Catat Pengeluaran
+                  </button>
                   {statusKas && <div className={`status ${statusKas.sukses ? 'sukses' : 'gagal'}`}>{statusKas.pesan}</div>}
                 </div>
               )}
