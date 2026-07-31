@@ -47,42 +47,47 @@ export async function GET(req) {
   const tanggal = params.get('tanggal') || tanggalJakarta().tanggal;
   const semua = tanggal === 'semua';
 
-  await Promise.all([ensurePengeluaranSheet(), ensureLogSheet()]);
-  const [logRows, pengeluaranRows] = await Promise.all([
-    getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID),
-    getValues('Pengeluaran!A2:D', SYSTEM_SPREADSHEET_ID),
-  ]);
+  try {
+    await Promise.all([ensurePengeluaranSheet(), ensureLogSheet()]);
+    const [logRows, pengeluaranRows] = await Promise.all([
+      getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID),
+      getValues('Pengeluaran!A2:D', SYSTEM_SPREADSHEET_ID),
+    ]);
 
-  const transaksiMasuk = [];
-  let masuk = 0;
-  logRows.forEach(r => {
-    const [waktu, user, aksi, kelas, siswa, item, lama, baru, metode] = r;
-    if (typeof waktu !== 'string' || !waktu) return;
-    if (!semua && !waktu.startsWith(tanggal)) return;
-    if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(aksi)) return;
-    const delta = (Number(baru) || 0) - (Number(lama) || 0);
-    if (delta <= 0) return;
-    masuk += delta;
-    transaksiMasuk.push({ tanggal: waktu.split(' ')[0] || '', jam: waktu.split(' ')[1] || '', user, kelas, siswa, item, nominal: delta, metode: metode || '-' });
-  });
+    const transaksiMasuk = [];
+    let masuk = 0;
+    logRows.forEach(r => {
+      const [waktu, user, aksi, kelas, siswa, item, lama, baru, metode] = r;
+      if (typeof waktu !== 'string' || !waktu) return;
+      if (!semua && !waktu.startsWith(tanggal)) return;
+      if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(aksi)) return;
+      const delta = (Number(baru) || 0) - (Number(lama) || 0);
+      if (delta <= 0) return;
+      masuk += delta;
+      transaksiMasuk.push({ tanggal: waktu.split(' ')[0] || '', jam: waktu.split(' ')[1] || '', user, kelas, siswa, item, nominal: delta, metode: metode || '-' });
+    });
 
-  const transaksiKeluar = [];
-  let keluar = 0;
-  pengeluaranRows.forEach(r => {
-    const [tgl, keterangan, nominal, user] = r;
-    if (!tgl) return;
-    if (!semua && tgl !== tanggal) return;
-    const n = Number(nominal) || 0;
-    keluar += n;
-    transaksiKeluar.push({ tanggal: tgl, keterangan, nominal: n, user });
-  });
+    const transaksiKeluar = [];
+    let keluar = 0;
+    pengeluaranRows.forEach(r => {
+      const [tgl, keterangan, nominal, user] = r;
+      if (!tgl) return;
+      if (!semua && tgl !== tanggal) return;
+      const n = Number(nominal) || 0;
+      keluar += n;
+      transaksiKeluar.push({ tanggal: tgl, keterangan, nominal: n, user });
+    });
 
-  return NextResponse.json({
-    tanggal: semua ? 'Semua Tanggal' : tanggal, semua, masuk, keluar, saldo: masuk - keluar,
-    transaksiMasuk: transaksiMasuk.sort((a, b) => (a.tanggal + a.jam).localeCompare(b.tanggal + b.jam)).reverse(),
-    transaksiKeluar,
-    rekapPerItem: rekapPerItem(transaksiMasuk),
-  });
+    return NextResponse.json({
+      tanggal: semua ? 'Semua Tanggal' : tanggal, semua, masuk, keluar, saldo: masuk - keluar,
+      transaksiMasuk: transaksiMasuk.sort((a, b) => (a.tanggal + a.jam).localeCompare(b.tanggal + b.jam)).reverse(),
+      transaksiKeluar,
+      rekapPerItem: rekapPerItem(transaksiMasuk),
+    });
+  } catch (e) {
+    console.error('GET /api/kas gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data kas: ' + e.message }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
@@ -95,9 +100,14 @@ export async function POST(req) {
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pengeluaran dicatat (demo, gak tersimpan)' });
 
-  await ensurePengeluaranSheet();
-  const { tanggal } = tanggalJakarta();
-  await appendRow('Pengeluaran', [tanggal, keterangan, Number(nominal), session.username], true, SYSTEM_SPREADSHEET_ID);
+  try {
+    await ensurePengeluaranSheet();
+    const { tanggal } = tanggalJakarta();
+    await appendRow('Pengeluaran', [tanggal, keterangan, Number(nominal), session.username], true, SYSTEM_SPREADSHEET_ID);
 
-  return NextResponse.json({ sukses: true, pesan: `Pengeluaran "${keterangan}" - Rp ${Number(nominal).toLocaleString('id-ID')} dicatat` });
+    return NextResponse.json({ sukses: true, pesan: `Pengeluaran "${keterangan}" - Rp ${Number(nominal).toLocaleString('id-ID')} dicatat` });
+  } catch (e) {
+    console.error('POST /api/kas gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal catat pengeluaran: ' + e.message });
+  }
 }

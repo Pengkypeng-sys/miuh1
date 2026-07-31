@@ -21,18 +21,23 @@ export async function GET(req) {
   const tanggal = params.get('tanggal') || tanggalJakarta().tanggal;
   const semua = tanggal === 'semua';
 
-  await ensureLogSheet();
-  const rows = await getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID);
+  try {
+    await ensureLogSheet();
+    const rows = await getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID);
 
-  let entries = rows
-    .filter(r => typeof r[0] === 'string' && r[0])
-    .filter(r => semua || r[0].startsWith(tanggal))
-    .map(r => ({ waktu: r[0], user: r[1], aksi: r[2], kelas: r[3], siswa: r[4], item: r[5], lama: r[6], baru: r[7], metode: r[8] }))
-    .sort((a, b) => b.waktu.localeCompare(a.waktu));
+    let entries = rows
+      .filter(r => typeof r[0] === 'string' && r[0])
+      .filter(r => semua || r[0].startsWith(tanggal))
+      .map(r => ({ waktu: r[0], user: r[1], aksi: r[2], kelas: r[3], siswa: r[4], item: r[5], lama: r[6], baru: r[7], metode: r[8] }))
+      .sort((a, b) => b.waktu.localeCompare(a.waktu));
 
-  const total = entries.length;
-  const dipotong = entries.length > 200;
-  entries = entries.slice(0, 200);
+    const total = entries.length;
+    const dipotong = entries.length > 200;
+    entries = entries.slice(0, 200);
 
-  return NextResponse.json({ tanggal: semua ? 'Semua Tanggal' : tanggal, semua, entries, total, dipotong });
+    return NextResponse.json({ tanggal: semua ? 'Semua Tanggal' : tanggal, semua, entries, total, dipotong });
+  } catch (e) {
+    console.error('GET /api/log gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil log: ' + e.message }, { status: 500 });
+  }
 }

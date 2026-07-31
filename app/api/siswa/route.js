@@ -11,8 +11,13 @@ export async function GET(req) {
   const kelas = new URL(req.url).searchParams.get('kelas');
   if (DEMO_MODE) return NextResponse.json((DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id')));
 
-  const data = await getValues(`${kelas}!A2:A`);
-  return NextResponse.json(data.map(r => r[0]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'id')));
+  try {
+    const data = await getValues(`${kelas}!A2:A`);
+    return NextResponse.json(data.map(r => r[0]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'id')));
+  } catch (e) {
+    console.error('GET /api/siswa gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data siswa: ' + e.message }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
@@ -26,20 +31,25 @@ export async function POST(req) {
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas} (demo, gak tersimpan)` });
 
-  // Lock per kelas — cegah 2 request tambah-siswa bareng (klik dobel/refresh cepat) lolos
-  // validasi nama-udah-ada bersamaan terus sama-sama nambah baris duplikat.
-  const result = await withLock(`siswa-${kelas}`, async () => {
-    const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-    if (existing.includes(namaFinal)) return { sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' };
+  try {
+    // Lock per kelas — cegah 2 request tambah-siswa bareng (klik dobel/refresh cepat) lolos
+    // validasi nama-udah-ada bersamaan terus sama-sama nambah baris duplikat.
+    const result = await withLock(`siswa-${kelas}`, async () => {
+      const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
+      if (existing.includes(namaFinal)) return { sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' };
 
-    const header = (await getValues(`${kelas}!1:1`))[0] || [];
-    const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
-    await appendRow(kelas, row);
-    return { sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` };
-  });
+      const header = (await getValues(`${kelas}!1:1`))[0] || [];
+      const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
+      await appendRow(kelas, row);
+      return { sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` };
+    });
 
-  if (result.sukses) await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
-  return NextResponse.json(result);
+    if (result.sukses) await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
+    return NextResponse.json(result);
+  } catch (e) {
+    console.error('POST /api/siswa gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal tambah siswa: ' + e.message });
+  }
 }
 
 export async function DELETE(req) {
@@ -50,11 +60,16 @@ export async function DELETE(req) {
   const { kelas, nama } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus (demo, gak tersimpan)` });
 
-  const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-  const idx = names.indexOf(nama);
-  if (idx === -1) return NextResponse.json({ sukses: false, pesan: 'Siswa tidak ditemukan' });
+  try {
+    const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
+    const idx = names.indexOf(nama);
+    if (idx === -1) return NextResponse.json({ sukses: false, pesan: 'Siswa tidak ditemukan' });
 
-  await deleteRow(kelas, idx + 2);
-  await logAction(session.username, 'hapus-siswa', kelas, nama, '', '', '');
-  return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus` });
+    await deleteRow(kelas, idx + 2);
+    await logAction(session.username, 'hapus-siswa', kelas, nama, '', '', '');
+    return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus` });
+  } catch (e) {
+    console.error('DELETE /api/siswa gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal hapus siswa: ' + e.message });
+  }
 }

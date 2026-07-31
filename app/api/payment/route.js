@@ -5,21 +5,6 @@ import { logAction, tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
 
-export async function GET(req) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
-
-  const params = new URL(req.url).searchParams;
-  const kelas = params.get('kelas'), siswa = params.get('siswa'), kolom = Number(params.get('kolom'));
-  if (DEMO_MODE) return NextResponse.json(Math.random() > 0.5 ? 70000 : '');
-
-  const row = await findRow(kelas, siswa);
-  if (row === -1) return NextResponse.json('');
-
-  const val = (await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0] ?? '';
-  return NextResponse.json(val);
-}
-
 export async function POST(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Session habis, silakan login ulang', sessionExpired: true });
@@ -31,39 +16,46 @@ export async function POST(req) {
     return NextResponse.json({ sukses: true, pesan: `Berhasil: ${siswa} - Rp ${v.toLocaleString('id-ID')} (demo, gak tersimpan)` });
   }
 
-  const row = await findRow(kelas, siswa);
-  if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
-
-  const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
-  const oldValue = Number((await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0]) || 0;
-
   let angka = Number(nominal);
-  if (angka > 0 && angka < 1000) angka = angka * 1000;
-  const isSet = mode === 'set';
-  const totalBaru = isSet ? angka : oldValue + angka;
+  if (!Number.isFinite(angka) || angka < 0) return NextResponse.json({ sukses: false, pesan: 'Nominal gak valid' });
 
-  await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [[totalBaru]]);
-  const pattern = keterangan ? `#,##0" (${keterangan})"` : null;
-  await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
+  try {
+    const row = await findRow(kelas, siswa);
+    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-  const tsCol = await getOrCreateTimestampColumn(kelas);
-  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggalJakarta().tanggal]], true);
+    const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
+    const oldValue = Number((await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0]) || 0;
 
-  const targetMap = await getTargetMap();
-  const status = hitungStatus(totalBaru, targetMap[itemName]);
-  // Hindari label dobel kayak "BUKU (BUKU 2)" — kalau keterangan udah mulai sama nama item, tampilin keterangannya aja
-  const itemLabel = keterangan
-    ? (keterangan.toUpperCase().startsWith(itemName.toUpperCase()) ? keterangan : `${itemName} (${keterangan})`)
-    : itemName;
+    if (angka > 0 && angka < 1000) angka = angka * 1000;
+    const isSet = mode === 'set';
+    const totalBaru = isSet ? angka : oldValue + angka;
 
-  await logAction(session.username, isSet ? 'edit-langsung' : 'submit-pembayaran', kelas, siswa, itemLabel, oldValue, totalBaru, metode);
-  return NextResponse.json({
-    sukses: true,
-    pesan: isSet
-      ? `${itemLabel}: nilai dikoreksi jadi Rp ${totalBaru.toLocaleString('id-ID')} (${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`
-      : `${itemLabel}: setor Rp ${angka.toLocaleString('id-ID')} (total Rp ${totalBaru.toLocaleString('id-ID')}, ${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`,
-    status, total: totalBaru, item: itemLabel,
-  });
+    await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [[totalBaru]]);
+    const pattern = keterangan ? `#,##0" (${keterangan})"` : null;
+    await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
+
+    const tsCol = await getOrCreateTimestampColumn(kelas);
+    await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggalJakarta().tanggal]], true);
+
+    const targetMap = await getTargetMap();
+    const status = hitungStatus(totalBaru, targetMap[itemName]);
+    // Hindari label dobel kayak "BUKU (BUKU 2)" — kalau keterangan udah mulai sama nama item, tampilin keterangannya aja
+    const itemLabel = keterangan
+      ? (keterangan.toUpperCase().startsWith(itemName.toUpperCase()) ? keterangan : `${itemName} (${keterangan})`)
+      : itemName;
+
+    await logAction(session.username, isSet ? 'edit-langsung' : 'submit-pembayaran', kelas, siswa, itemLabel, oldValue, totalBaru, metode);
+    return NextResponse.json({
+      sukses: true,
+      pesan: isSet
+        ? `${itemLabel}: nilai dikoreksi jadi Rp ${totalBaru.toLocaleString('id-ID')} (${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`
+        : `${itemLabel}: setor Rp ${angka.toLocaleString('id-ID')} (total Rp ${totalBaru.toLocaleString('id-ID')}, ${status === 'lunas' ? 'lunas' : status === 'cicil' ? 'masih nyicil' : 'belum bayar'})`,
+      status, total: totalBaru, item: itemLabel,
+    });
+  } catch (e) {
+    console.error('POST /api/payment gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal simpan pembayaran: ' + e.message });
+  }
 }
 
 export async function DELETE(req) {
@@ -74,15 +66,20 @@ export async function DELETE(req) {
   const { kelas, siswa, kolom } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Data pembayaran ${siswa} berhasil dihapus (demo, gak tersimpan)` });
 
-  const row = await findRow(kelas, siswa);
-  if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
+  try {
+    const row = await findRow(kelas, siswa);
+    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-  const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
-  const oldValue = (await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0] ?? '';
+    const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
+    const oldValue = (await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0] ?? '';
 
-  await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [['']]);
-  await highlightCell(kelas, row, kolom, { yellow: false });
+    await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [['']]);
+    await highlightCell(kelas, row, kolom, { yellow: false });
 
-  await logAction(session.username, 'hapus-pembayaran', kelas, siswa, itemName, oldValue, '');
-  return NextResponse.json({ sukses: true, pesan: `Data pembayaran ${siswa} berhasil dihapus` });
+    await logAction(session.username, 'hapus-pembayaran', kelas, siswa, itemName, oldValue, '');
+    return NextResponse.json({ sukses: true, pesan: `Data pembayaran ${siswa} berhasil dihapus` });
+  } catch (e) {
+    console.error('DELETE /api/payment gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal hapus pembayaran: ' + e.message });
+  }
 }

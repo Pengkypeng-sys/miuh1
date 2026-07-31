@@ -17,37 +17,42 @@ export async function POST(req) {
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pembayaran dipindahkan (demo, gak tersimpan)' });
 
-  const row = await findRow(kelas, siswa);
-  if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
+  try {
+    const row = await findRow(kelas, siswa);
+    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-  const [dariNama, keNama] = await Promise.all([
-    getValues(`${kelas}!${colToLetter(dariKolom)}1`).then(v => v[0]?.[0] || ''),
-    getValues(`${kelas}!${colToLetter(keKolom)}1`).then(v => v[0]?.[0] || ''),
-  ]);
-  const dariLama = Number((await getValues(`${kelas}!${colToLetter(dariKolom)}${row}`))[0]?.[0]) || 0;
-  const keLama = Number((await getValues(`${kelas}!${colToLetter(keKolom)}${row}`))[0]?.[0]) || 0;
+    const [dariNama, keNama] = await Promise.all([
+      getValues(`${kelas}!${colToLetter(dariKolom)}1`).then(v => v[0]?.[0] || ''),
+      getValues(`${kelas}!${colToLetter(keKolom)}1`).then(v => v[0]?.[0] || ''),
+    ]);
+    const dariLama = Number((await getValues(`${kelas}!${colToLetter(dariKolom)}${row}`))[0]?.[0]) || 0;
+    const keLama = Number((await getValues(`${kelas}!${colToLetter(keKolom)}${row}`))[0]?.[0]) || 0;
 
-  let pindah = Number(nominal);
-  if (!pindah || pindah <= 0) pindah = dariLama;
-  if (pindah > dariLama) pindah = dariLama;
+    let pindah = Number(nominal);
+    if (!pindah || pindah <= 0) pindah = dariLama;
+    if (pindah > dariLama) pindah = dariLama;
 
-  const dariBaru = dariLama - pindah;
-  const keBaru = keLama + pindah;
+    const dariBaru = dariLama - pindah;
+    const keBaru = keLama + pindah;
 
-  await setValues(`${kelas}!${colToLetter(dariKolom)}${row}`, [[dariBaru]]);
-  await setValues(`${kelas}!${colToLetter(keKolom)}${row}`, [[keBaru]]);
-  await highlightCell(kelas, row, keKolom, { yellow: true, numberFormat: true });
-  if (dariBaru === 0) await highlightCell(kelas, row, dariKolom, { yellow: false });
+    await setValues(`${kelas}!${colToLetter(dariKolom)}${row}`, [[dariBaru]]);
+    await setValues(`${kelas}!${colToLetter(keKolom)}${row}`, [[keBaru]]);
+    await highlightCell(kelas, row, keKolom, { yellow: true, numberFormat: true });
+    if (dariBaru === 0) await highlightCell(kelas, row, dariKolom, { yellow: false });
 
-  const tsCol = await getOrCreateTimestampColumn(kelas);
-  const { tanggal } = tanggalJakarta();
-  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggal]]);
+    const tsCol = await getOrCreateTimestampColumn(kelas);
+    const { tanggal } = tanggalJakarta();
+    await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggal]], true);
 
-  await logAction(session.username, 'pindah-pembayaran', kelas, siswa, `${dariNama} → ${keNama}`, dariLama, keBaru);
+    await logAction(session.username, 'pindah-pembayaran', kelas, siswa, `${dariNama} → ${keNama}`, dariLama, keBaru);
 
-  return NextResponse.json({
-    sukses: true,
-    pesan: `Rp ${pindah.toLocaleString('id-ID')} dipindah dari "${dariNama}" ke "${keNama}"`,
-    dariKolom, keKolom, dariBaru, keBaru,
-  });
+    return NextResponse.json({
+      sukses: true,
+      pesan: `Rp ${pindah.toLocaleString('id-ID')} dipindah dari "${dariNama}" ke "${keNama}"`,
+      dariKolom, keKolom, dariBaru, keBaru,
+    });
+  } catch (e) {
+    console.error('POST /api/payment/pindah gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal pindah pembayaran: ' + e.message });
+  }
 }

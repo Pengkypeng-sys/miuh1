@@ -14,6 +14,8 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_REKAP);
 
   const kelasFilter = new URL(req.url).searchParams.get('kelas'); // null = semua kelas
+
+  try {
   const today = tanggalJakarta().tanggal;
   const titles = (await getSheetTitles()).filter(t => !EXCLUDED_SHEETS.includes(t) && (!kelasFilter || t === kelasFilter));
   const targetMap = await getTargetMap();
@@ -95,4 +97,8 @@ export async function GET(req) {
   })).sort((a, b) => a.kolom - b.kolom);
 
   return NextResponse.json({ perItem, perKelas, bayarHariIni, kelasFilter: kelasFilter || null });
+  } catch (e) {
+    console.error('GET /api/rekap gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });
+  }
 }
