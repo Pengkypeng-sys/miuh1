@@ -128,6 +128,8 @@ export default function Home() {
   const PPDB_HARGA_ACUAN = { '1-L': 940000, '2-L': 1550000, '3-L': 1175000, '1-P': 1035000, '2-P': 1165000, '3-P': 1295000 };
   const BUKU_HARGA_ACUAN = { 'KELAS 1': 400000, 'KELAS 2': 400000, 'KELAS 3': 480000, 'KELAS 4': 480000, 'KELAS 5': 475000, 'KELAS 6': 475000 };
   const BUKU_LABEL_HARGA = { 'BUKU 1': 400000, 'BUKU 2': 480000, 'BUKU 3': 475000 };
+  const ITEM_ICONS = ['receipt', 'money', 'wallet', 'book', 'layers', 'case', 'students', 'chart'];
+  const ITEM_KATEGORI = ['Wajib', 'Opsional', 'Ekstrakurikuler', 'Lainnya'];
   // Target harga PPDB/BUKU beda-beda per varian (Gel/Kelas), tapi TargetHarga sheet cuma nyimpen 1 acuan.
   // Baca varian asli dari keterangan yang kesimpen di format cell (mis. "GEL.3 LAKI-LAKI"), baru cari harga aslinya.
   function targetSebenarnya(namaItem, ket, fallback) {
@@ -165,6 +167,9 @@ export default function Home() {
   const [namaItemBaru, setNamaItemBaru] = useState('');
   const [targetItemBaru, setTargetItemBaru] = useState('');
   const [kelasItemBaru, setKelasItemBaru] = useState([]);
+  const [iconItemBaru, setIconItemBaru] = useState('receipt');
+  const [kategoriItemBaru, setKategoriItemBaru] = useState('Wajib');
+  const [loadingUrutan, setLoadingUrutan] = useState(false);
   const [statusItem, setStatusItem] = useState(null);
   const [loadingItem, setLoadingItem] = useState(false);
   const [editItemNama, setEditItemNama] = useState(null);
@@ -465,12 +470,15 @@ export default function Home() {
   async function tambahItem() {
     if (!namaItemBaru.trim() || !targetItemBaru) { alert('Isi nama item dan target harga dulu'); return; }
     setLoadingItem(true);
-    const res = await fetch('/api/item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: namaItemBaru, target: onlyDigits(targetItemBaru), kelas: kelasItemBaru }) }).then(r => r.json());
+    const res = await fetch('/api/item', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama: namaItemBaru, target: onlyDigits(targetItemBaru), kelas: kelasItemBaru, icon: iconItemBaru, kategori: kategoriItemBaru }),
+    }).then(r => r.json());
     setLoadingItem(false);
     if (cekSessionExpired(res)) return;
     setStatusItem(res);
     if (res.sukses) {
-      setNamaItemBaru(''); setTargetItemBaru(''); setKelasItemBaru([]);
+      setNamaItemBaru(''); setTargetItemBaru(''); setKelasItemBaru([]); setIconItemBaru('receipt'); setKategoriItemBaru('Wajib');
       fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
     }
   }
@@ -486,6 +494,27 @@ export default function Home() {
       setEditItemNama(null);
       fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setItemList);
     }
+  }
+
+  async function ubahItemMeta(namaItem, patch) {
+    const res = await fetch('/api/item', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: namaItem, ...patch }) }).then(r => r.json());
+    if (cekSessionExpired(res)) return;
+    if (res.sukses) fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setItemList);
+    else setStatusItem(res);
+  }
+
+  async function pindahUrutanItem(namaItem, arah) {
+    const idx = itemList.findIndex(i => i.nama === namaItem);
+    const idxTujuan = idx + arah;
+    if (idx === -1 || idxTujuan < 0 || idxTujuan >= itemList.length) return;
+    const urutanBaru = [...itemList];
+    [urutanBaru[idx], urutanBaru[idxTujuan]] = [urutanBaru[idxTujuan], urutanBaru[idx]];
+    setItemList(urutanBaru); // optimistic, langsung keliatan gesernya
+    setLoadingUrutan(true);
+    const res = await fetch('/api/item', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urutan: urutanBaru.map(i => i.nama) }) }).then(r => r.json());
+    setLoadingUrutan(false);
+    if (cekSessionExpired(res)) return;
+    if (!res.sukses) { setStatusItem(res); fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setItemList); }
   }
 
   function hapusItem(namaItem) {
@@ -805,6 +834,7 @@ export default function Home() {
                       <div key={i.kolom} className={`checkout-row ${checked ? 'checked' : ''}`}>
                         <label className="checkout-check">
                           <input type="checkbox" checked={checked} onChange={() => toggleCheckedItem(i.kolom)} />
+                          <Icon name={i.icon || 'receipt'} size={13} />
                           <span className="nm">{i.nama}</span>
                           <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓' : status === 'cicil' ? 'nyicil' : 'belum'}</span>
                         </label>
@@ -1010,6 +1040,27 @@ export default function Home() {
                     <label>Target Harga</label>
                     <input type="text" inputMode="numeric" value={targetItemBaru} onChange={e => setTargetItemBaru(formatRibuan(e.target.value))} placeholder="contoh: 200.000" />
                   </div>
+                  <div>
+                    <label>Icon</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {ITEM_ICONS.map(ic => (
+                        <button
+                          key={ic} type="button"
+                          onClick={() => setIconItemBaru(ic)}
+                          className={iconItemBaru === ic ? 'icon-pick selected' : 'icon-pick'}
+                          title={ic}
+                        >
+                          <Icon name={ic} size={16} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label>Kategori</label>
+                    <select value={kategoriItemBaru} onChange={e => setKategoriItemBaru(e.target.value)}>
+                      {ITEM_KATEGORI.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div style={{ marginTop: 10 }}>
                   <label>Kelas (kosongkan = semua kelas)</label>
@@ -1032,54 +1083,78 @@ export default function Home() {
                 {statusItem && <div className={`status ${statusItem.sukses ? 'sukses' : 'gagal'}`}>{statusItem.pesan}</div>}
 
                 <div className="subsection-title">Jenis Pembayaran Aktif ({itemList.length})</div>
-                <div className="item-manage-list">
-                  {itemList.map(i => (
-                    <div key={i.kolom} className="item-manage-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <span className="nm">{i.nama}</span>
-                      {editItemNama === i.nama ? (
-                        <>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={editItemTargetVal}
-                            onChange={e => setEditItemTargetVal(formatRibuan(e.target.value))}
-                            placeholder="Target harga"
-                            style={{ width: 130 }}
-                          />
-                          <button className="btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => simpanTargetItem(i.nama)}>
-                            <Icon name="check" size={12} />
-                          </button>
-                          <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => setEditItemNama(null)}>
-                            <Icon name="minus" size={12} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="target">{i.target ? rp(i.target) : 'tanpa target'}</span>
-                          <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => { setEditItemNama(i.nama); setEditItemTargetVal(i.target ? formatRibuan(String(i.target)) : ''); }}>
-                            <Icon name="edit" size={12} />
-                          </button>
-                          <button className="ghost-danger btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => hapusItem(i.nama)}>
-                            <Icon name="trash" size={12} />
-                          </button>
-                        </>
-                      )}
+                {ITEM_KATEGORI.filter(kat => itemList.some(i => (i.kategori || 'Lainnya') === kat)).map(kat => (
+                  <div key={kat} style={{ marginBottom: 14 }}>
+                    <div className="kategori-label">{kat}</div>
+                    <div className="item-manage-list">
+                      {itemList.filter(i => (i.kategori || 'Lainnya') === kat).map(i => {
+                        const idxFlat = itemList.findIndex(x => x.nama === i.nama);
+                        return (
+                          <div key={i.kolom} className="item-manage-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 8 }}>
+                              <div className="reorder-btns">
+                                <button type="button" className="reorder-btn" disabled={loadingUrutan || idxFlat === 0} onClick={() => pindahUrutanItem(i.nama, -1)} title="Naikkan urutan">
+                                  <Icon name="up" size={11} />
+                                </button>
+                                <button type="button" className="reorder-btn" disabled={loadingUrutan || idxFlat === itemList.length - 1} onClick={() => pindahUrutanItem(i.nama, 1)} title="Turunkan urutan">
+                                  <Icon name="down" size={11} />
+                                </button>
+                              </div>
+                              <span className="ic-badge" style={{ width: 26, height: 26 }}><Icon name={i.icon || 'receipt'} size={13} /></span>
+                              <span className="nm" style={{ flex: 1 }}>{i.nama}</span>
+                              {editItemNama === i.nama ? (
+                                <>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={editItemTargetVal}
+                                    onChange={e => setEditItemTargetVal(formatRibuan(e.target.value))}
+                                    placeholder="Target harga"
+                                    style={{ width: 130 }}
+                                  />
+                                  <button className="btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => simpanTargetItem(i.nama)}>
+                                    <Icon name="check" size={12} />
+                                  </button>
+                                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => setEditItemNama(null)}>
+                                    <Icon name="minus" size={12} />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <select
+                                    value={i.kategori || 'Lainnya'}
+                                    style={{ width: 'auto', margin: 0, fontSize: 12.5, padding: '4px 6px' }}
+                                    onChange={e => ubahItemMeta(i.nama, { kategori: e.target.value })}
+                                  >
+                                    {ITEM_KATEGORI.map(k => <option key={k} value={k}>{k}</option>)}
+                                  </select>
+                                  <span className="target">{i.target ? rp(i.target) : 'tanpa target'}</span>
+                                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => { setEditItemNama(i.nama); setEditItemTargetVal(i.target ? formatRibuan(String(i.target)) : ''); }}>
+                                    <Icon name="edit" size={12} />
+                                  </button>
+                                  <button className="ghost-danger btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => hapusItem(i.nama)}>
+                                    <Icon name="trash" size={12} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            {i.nama === 'PPDB' && (
+                              <div className="hint-text" style={{ padding: '4px 0 2px 40px' }}>
+                                Gel.1 L: Rp 940.000 &nbsp;·&nbsp; Gel.2 L: Rp 1.550.000 &nbsp;·&nbsp; Gel.3 L: Rp 1.175.000 &nbsp;·&nbsp;
+                                Gel.1 P: Rp 1.035.000 &nbsp;·&nbsp; Gel.2 P: Rp 1.165.000 &nbsp;·&nbsp; Gel.3 P: Rp 1.295.000
+                              </div>
+                            )}
+                            {i.nama === 'BUKU' && (
+                              <div className="hint-text" style={{ padding: '4px 0 2px 40px' }}>
+                                BUKU 1 (Kelas 1-2): Rp 400.000 &nbsp;·&nbsp; BUKU 2 (Kelas 3-4): Rp 480.000 &nbsp;·&nbsp; BUKU 3 (Kelas 5-6): Rp 475.000
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    {i.nama === 'PPDB' && (
-                      <div className="hint-text" style={{ padding: '4px 0 2px' }}>
-                        Gel.1 L: Rp 940.000 &nbsp;·&nbsp; Gel.2 L: Rp 1.550.000 &nbsp;·&nbsp; Gel.3 L: Rp 1.175.000 &nbsp;·&nbsp;
-                        Gel.1 P: Rp 1.035.000 &nbsp;·&nbsp; Gel.2 P: Rp 1.165.000 &nbsp;·&nbsp; Gel.3 P: Rp 1.295.000
-                      </div>
-                    )}
-                    {i.nama === 'BUKU' && (
-                      <div className="hint-text" style={{ padding: '4px 0 2px' }}>
-                        BUKU 1 (Kelas 1-2): Rp 400.000 &nbsp;·&nbsp; BUKU 2 (Kelas 3-4): Rp 480.000 &nbsp;·&nbsp; BUKU 3 (Kelas 5-6): Rp 475.000
-                      </div>
-                    )}
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
 
               {role === 'admin' && (
