@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, getTargetMap } from '@/lib/sheets';
+import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, getTargetMap, findRow } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
-import { logAction } from '@/lib/log';
+import { logAction, tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
-
-async function findRow(kelas, siswa) {
-  const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-  const idx = names.indexOf(siswa);
-  return idx === -1 ? -1 : idx + 2;
-}
-
-const todayJakarta = () => new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/');
 
 export async function GET(req) {
   const session = await getSession();
@@ -55,7 +47,7 @@ export async function POST(req) {
   await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
 
   const tsCol = await getOrCreateTimestampColumn(kelas);
-  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[todayJakarta()]], true);
+  await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggalJakarta().tanggal]], true);
 
   const targetMap = await getTargetMap();
   const status = hitungStatus(totalBaru, targetMap[itemName]);

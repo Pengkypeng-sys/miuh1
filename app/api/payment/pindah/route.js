@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn } from '@/lib/sheets';
+import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, findRow } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { logAction, tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
-
-async function findRow(kelas, siswa) {
-  const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-  const idx = names.indexOf(siswa);
-  return idx === -1 ? -1 : idx + 2;
-}
 
 // Pindahin nominal dari 1 item ke item lain buat siswa yang sama — buat koreksi salah pilih item pas input.
 export async function POST(req) {

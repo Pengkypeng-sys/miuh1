@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getValues, getSheetTitles, EXCLUDED_SHEETS, getTargetMap, getColumnLabels, colToLetter } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
+import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
 
-const todayJakarta = () => new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/');
 const VARIAN_ITEMS = ['PPDB', 'BUKU']; // item yang dipecah per Gel./Kelas Buku waktu ditampilin
 
 export async function GET(req) {
@@ -14,7 +14,7 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_REKAP);
 
   const kelasFilter = new URL(req.url).searchParams.get('kelas'); // null = semua kelas
-  const today = todayJakarta();
+  const today = tanggalJakarta().tanggal;
   const titles = (await getSheetTitles()).filter(t => !EXCLUDED_SHEETS.includes(t) && (!kelasFilter || t === kelasFilter));
   const targetMap = await getTargetMap();
 
