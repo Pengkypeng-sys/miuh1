@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues } from '@/lib/sheets';
+import { getValues, getRowLabels } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE } from '@/lib/demoData';
 
@@ -20,7 +20,10 @@ export async function GET(req) {
 
   const row = idx + 2;
   const values = (await getValues(`${kelas}!A${row}:Z${row}`))[0] || [];
+  const labels = await getRowLabels(kelas, row, values.length || 26);
   const result = {};
+  const keterangan = {};
   values.forEach((val, i) => { if (i >= 1) result[i + 1] = val; }); // kolom B dst (1-based)
-  return NextResponse.json(result);
+  labels.forEach((lbl, i) => { if (i >= 1 && lbl) keterangan[i + 1] = lbl; });
+  return NextResponse.json({ ...result, __keterangan: keterangan });
 }

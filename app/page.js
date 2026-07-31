@@ -77,6 +77,21 @@ export default function Home() {
   const BUKU_KELAS_MAP = { 'KELAS 1': 'BUKU 1', 'KELAS 2': 'BUKU 1', 'KELAS 3': 'BUKU 2', 'KELAS 4': 'BUKU 2', 'KELAS 5': 'BUKU 3', 'KELAS 6': 'BUKU 3' };
   const PPDB_HARGA_ACUAN = { '1-L': 940000, '2-L': 1550000, '3-L': 1175000, '1-P': 1035000, '2-P': 1165000, '3-P': 1295000 };
   const BUKU_HARGA_ACUAN = { 'KELAS 1': 400000, 'KELAS 2': 400000, 'KELAS 3': 480000, 'KELAS 4': 480000, 'KELAS 5': 475000, 'KELAS 6': 475000 };
+  const BUKU_LABEL_HARGA = { 'BUKU 1': 400000, 'BUKU 2': 480000, 'BUKU 3': 475000 };
+  // Target harga PPDB/BUKU beda-beda per varian (Gel/Kelas), tapi TargetHarga sheet cuma nyimpen 1 acuan.
+  // Baca varian asli dari keterangan yang kesimpen di format cell (mis. "GEL.3 LAKI-LAKI"), baru cari harga aslinya.
+  function targetSebenarnya(namaItem, ket, fallback) {
+    if (!ket) return fallback;
+    if (namaItem === 'PPDB') {
+      const m = ket.match(/GEL\.?(\d)\s+(LAKI-LAKI|PEREMPUAN)/i);
+      if (m) return PPDB_HARGA_ACUAN[`${m[1]}-${m[2].toUpperCase().startsWith('L') ? 'L' : 'P'}`] || fallback;
+    }
+    if (namaItem === 'BUKU') {
+      const m = ket.match(/BUKU\s*(\d)/i);
+      if (m) return BUKU_LABEL_HARGA[`BUKU ${m[1]}`] || fallback;
+    }
+    return fallback;
+  }
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
@@ -782,16 +797,18 @@ export default function Home() {
                 <div className="item-status-list">
                   {itemList.map(i => {
                     const val = Number(itemValues[i.kolom]) || 0;
-                    const status = hitungStatus(val, i.target);
-                    const pct = i.target ? Math.min(100, Math.round((val / i.target) * 100)) : (val ? 100 : 0);
-                    const sisa = i.target ? val - i.target : null;
+                    const ket = itemValues.__keterangan?.[i.kolom];
+                    const target = targetSebenarnya(i.nama, ket, i.target);
+                    const status = hitungStatus(val, target);
+                    const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
+                    const sisa = target ? val - target : null;
                     return (
                       <div key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="nm" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}</span>
+                            <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
                             <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
-                              {val ? rp(val) : 'Belum bayar'}{i.target ? ` / ${rp(i.target)}` : ''}
+                              {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
                             </span>
                           </div>
                           {status === 'cicil' && (
