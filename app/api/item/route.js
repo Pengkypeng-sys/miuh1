@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getValues, getItemMetaMap, addPaymentItem, deletePaymentItem, updatePaymentItemTarget, updateItemMeta, reorderItems, isKelasValid } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE, DEMO_ITEMS } from '@/lib/demoData';
+
+// Catatan kompatibilitas: field `kolom` di response dulu artinya nomor kolom sheet,
+// sekarang cuma id baris item_pembayaran — frontend pakai ini sebagai id unik doang
+// (key React, kunci itemValues/checkedItems), gak perlu tau isinya angka kolom asli lagi.
 
 export async function GET(req) {
   const session = await getSession();
@@ -10,21 +14,18 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_ITEMS);
 
   const kelas = new URL(req.url).searchParams.get('kelas');
-  if (!(await isKelasValid(kelas))) return NextResponse.json([]);
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json([]);
 
-  const header = (await getValues(`${kelas}!1:1`))[0] || [];
-  const metaMap = await getItemMetaMap();
-  const items = header
-    .map((nama, i) => ({
-      nama, kolom: i + 1,
-      target: metaMap[nama]?.target || 0,
-      icon: metaMap[nama]?.icon || 'receipt',
-      kategori: metaMap[nama]?.kategori || 'Lainnya',
-      urutan: metaMap[nama]?.urutan ?? i,
-    }))
-    .filter(h => h.kolom >= 2 && h.nama && h.nama !== 'Terakhir Diisi' && h.nama !== 'Angkatan')
-    .sort((a, b) => a.urutan - b.urutan);
-  return NextResponse.json(items);
+  try {
+    const rows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));
+    const items = rows
+      .filter(it => !it.kelas_scope || it.kelas_scope.includes(kelas))
+      .map(it => ({ nama: it.nama, kolom: it.id, target: it.target, icon: it.icon, kategori: it.kategori, urutan: it.urutan }));
+    return NextResponse.json(items);
+  } catch (e) {
+    console.error('GET /api/item gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil item: ' + e.message }, { status: 500 });
+  }
 }
 
 export async function POST(req) {
@@ -35,17 +36,28 @@ export async function POST(req) {
   const { nama, target, kelas, icon, kategori } = await req.json();
   if (!nama || !nama.trim()) return NextResponse.json({ sukses: false, pesan: 'Nama item tidak boleh kosong' });
   const namaFinal = nama.trim().toUpperCase();
-  const kelasTerpilih = Array.isArray(kelas) && kelas.length ? kelas : null;
+  const kelasScope = Array.isArray(kelas) && kelas.length ? kelas : null;
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${namaFinal}" ditambahkan (demo, gak tersimpan)` });
 
   try {
-    await addPaymentItem(namaFinal, target, kelasTerpilih, { icon, kategori });
+    const existing = throwIfError(await db().from('item_pembayaran').select('id').order('urutan', { ascending: false }).limit(1));
+    const urutan = existing.length ? existing[0].urutan + 1 : 0;
+
+    const { error } = await db().from('item_pembayaran').insert({
+      nama: namaFinal, target: Number(target) || 0, icon: icon || 'receipt', kategori: kategori || 'Lainnya',
+      urutan, kelas_scope: kelasScope,
+    });
+    if (error) {
+      if (error.code === '23505') return NextResponse.json({ sukses: false, pesan: `Item "${namaFinal}" sudah ada` });
+      throw new Error(error.message);
+    }
+
+    return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${namaFinal}" berhasil ditambahkan ke semua kelas` });
   } catch (e) {
+    console.error('POST /api/item gagal:', e);
     return NextResponse.json({ sukses: false, pesan: e.message });
   }
-
-  return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${namaFinal}" berhasil ditambahkan ke semua kelas` });
 }
 
 export async function PUT(req) {
@@ -59,13 +71,17 @@ export async function PUT(req) {
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `"${nama}" diubah (demo, gak tersimpan)` });
 
   try {
-    if (target !== undefined) await updatePaymentItemTarget(nama, Number(target) || 0);
-    if (icon || kategori) await updateItemMeta(nama, { icon, kategori });
+    const patch = {};
+    if (target !== undefined) patch.target = Number(target) || 0;
+    if (icon) patch.icon = icon;
+    if (kategori) patch.kategori = kategori;
+    if (Object.keys(patch).length) throwIfError(await db().from('item_pembayaran').update(patch).eq('nama', nama));
+
+    return NextResponse.json({ sukses: true, pesan: `"${nama}" berhasil diubah` });
   } catch (e) {
+    console.error('PUT /api/item gagal:', e);
     return NextResponse.json({ sukses: false, pesan: e.message });
   }
-
-  return NextResponse.json({ sukses: true, pesan: `"${nama}" berhasil diubah` });
 }
 
 // Simpan urutan tampil baru — body: { urutan: [nama1, nama2, ...] }
@@ -80,12 +96,12 @@ export async function PATCH(req) {
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Urutan diubah (demo, gak tersimpan)' });
 
   try {
-    await reorderItems(urutan);
+    await Promise.all(urutan.map((nama, i) => db().from('item_pembayaran').update({ urutan: i }).eq('nama', nama)));
+    return NextResponse.json({ sukses: true, pesan: 'Urutan berhasil disimpan' });
   } catch (e) {
+    console.error('PATCH /api/item gagal:', e);
     return NextResponse.json({ sukses: false, pesan: e.message });
   }
-
-  return NextResponse.json({ sukses: true, pesan: 'Urutan berhasil disimpan' });
 }
 
 export async function DELETE(req) {
@@ -99,10 +115,11 @@ export async function DELETE(req) {
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${nama}" dihapus (demo, gak tersimpan)` });
 
   try {
-    await deletePaymentItem(nama);
+    // on delete cascade di tabel pembayaran — hapus item otomatis ikut hapus semua data pembayaran item itu
+    throwIfError(await db().from('item_pembayaran').delete().eq('nama', nama));
+    return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${nama}" dan semua data pembayarannya dihapus dari semua kelas` });
   } catch (e) {
+    console.error('DELETE /api/item gagal:', e);
     return NextResponse.json({ sukses: false, pesan: e.message });
   }
-
-  return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${nama}" dan semua data pembayarannya dihapus dari semua kelas` });
 }

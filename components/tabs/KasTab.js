@@ -34,28 +34,44 @@ export function KasTab({ p }) {
         {!loadingKas && kas && (
           <>
             <div className="stat-grid" style={{ marginBottom: 20 }}>
-              <div className="stat-tile">
-                <div className="icon-badge green"><Icon name="down" size={20} /></div>
+              <div className="stat-tile stat-tile-green">
+                <div className="stat-tile-icon"><Icon name="down" size={22} /></div>
                 <div><div className="label">Uang Masuk</div><div className="value value-money">{rp(kas.masuk)}</div></div>
               </div>
-              <div className="stat-tile">
-                <div className="icon-badge rose"><Icon name="up" size={20} /></div>
+              <div className="stat-tile stat-tile-rose">
+                <div className="stat-tile-icon"><Icon name="up" size={22} /></div>
                 <div><div className="label">Uang Keluar</div><div className="value value-money">{rp(kas.keluar)}</div></div>
               </div>
-              <div className="stat-tile">
-                <div className="icon-badge blue"><Icon name="case" size={20} /></div>
+              <div className={`stat-tile ${kas.saldo >= 0 ? 'stat-tile-blue' : 'stat-tile-rose'}`}>
+                <div className="stat-tile-icon"><Icon name="case" size={22} /></div>
                 <div><div className="label">Saldo Hari Ini</div><div className="value value-money">{rpSigned(kas.saldo)}</div></div>
               </div>
             </div>
 
+            {(kas.masuk > 0 || kas.keluar > 0) && (
+              <div className="cashflow-bar-wrap" style={{ marginBottom: 24 }}>
+                <div className="cashflow-bar">
+                  {kas.masuk > 0 && <div className="cashflow-seg in" style={{ width: `${(kas.masuk / (kas.masuk + kas.keluar)) * 100}%` }} />}
+                  {kas.keluar > 0 && <div className="cashflow-seg out" style={{ width: `${(kas.keluar / (kas.masuk + kas.keluar)) * 100}%` }} />}
+                </div>
+                <div className="cashflow-legend">
+                  <span><i className="dot in" /> Masuk {Math.round((kas.masuk / (kas.masuk + kas.keluar || 1)) * 100)}%</span>
+                  <span><i className="dot out" /> Keluar {Math.round((kas.keluar / (kas.masuk + kas.keluar || 1)) * 100)}%</span>
+                </div>
+              </div>
+            )}
+
             <div className="subsection-title">Rekap Setoran per Item</div>
             <div className="table-wrap" style={{ marginBottom: 20 }}>
               <table>
-                <thead><tr><th>Item</th><th className="num">Jumlah Orang</th><th className="num">Total Rp</th></tr></thead>
+                <thead><tr><th>Item</th><th className="num">Jumlah Orang</th><th className="num">Total Rp</th><th className="num">%</th></tr></thead>
                 <tbody>
-                  {kas.rekapPerItem.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada setoran hari ini</td></tr>}
+                  {kas.rekapPerItem.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada setoran hari ini</td></tr>}
                   {kas.rekapPerItem.map((r, i) => (
-                    <tr key={i}><td>{r.item}</td><td className="num">{r.orang}</td><td className="num">{rp(r.total)}</td></tr>
+                    <tr key={i}>
+                      <td>{r.item}</td><td className="num">{r.orang}</td><td className="num">{rp(r.total)}</td>
+                      <td className="num" style={{ color: 'var(--muted)' }}>{kas.masuk ? Math.round((r.total / kas.masuk) * 100) : 0}%</td>
+                    </tr>
                   ))}
                 </tbody>
                 {kas.rekapPerItem.length > 0 && (
@@ -64,6 +80,7 @@ export function KasTab({ p }) {
                       <td style={{ fontWeight: 700 }}>Total</td>
                       <td className="num" style={{ fontWeight: 700 }}>{kas.rekapPerItem.reduce((s, r) => s + r.orang, 0)}</td>
                       <td className="num" style={{ fontWeight: 700 }}>{rp(kas.masuk)}</td>
+                      <td className="num" style={{ fontWeight: 700 }}>100%</td>
                     </tr>
                   </tfoot>
                 )}

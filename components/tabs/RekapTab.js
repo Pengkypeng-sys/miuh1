@@ -23,16 +23,16 @@ export function RekapTab({ p }) {
     <>
       <motion.div className="stat-grid" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.07 } } }}>
         {[
-          { icon: 'case', color: 'blue', label: 'Total Kelas', value: rekap?.perKelas.length ?? '—' },
-          { icon: 'students', color: 'amber', label: 'Total Siswa', value: totalSiswaSemua || '—' },
-          { icon: 'money', color: 'green', label: 'Total Terkumpul', value: rp(totalTerkumpul), money: true },
-          { icon: 'check', color: 'rose', label: 'Rata² % Lunas', value: `${rataPersenLunas}%` },
+          { icon: 'case', theme: 'blue', label: 'Total Kelas', value: rekap?.perKelas.length ?? '—' },
+          { icon: 'students', theme: 'amber', label: 'Total Siswa', value: totalSiswaSemua || '—' },
+          { icon: 'money', theme: 'green', label: 'Total Terkumpul', value: rp(totalTerkumpul), money: true },
+          { icon: 'check', theme: 'rose', label: 'Rata² % Lunas', value: `${rataPersenLunas}%` },
         ].map(s => (
           <motion.div
-            key={s.label} className="stat-tile"
+            key={s.label} className={`stat-tile stat-tile-${s.theme}`}
             variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
           >
-            <div className={`icon-badge ${s.color}`}><Icon name={s.icon} size={20} /></div>
+            <div className="stat-tile-icon"><Icon name={s.icon} size={22} /></div>
             <div><div className="label">{s.label}</div><div className={`value ${s.money ? 'value-money' : ''}`}>{s.value}</div></div>
           </motion.div>
         ))}

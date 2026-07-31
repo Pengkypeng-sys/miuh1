@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, appendRow, deleteRow, withLock, isKelasValid } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE, DEMO_SISWA } from '@/lib/demoData';
@@ -10,11 +10,11 @@ export async function GET(req) {
 
   const kelas = new URL(req.url).searchParams.get('kelas');
   if (DEMO_MODE) return NextResponse.json((DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id')));
-  if (!(await isKelasValid(kelas))) return NextResponse.json([]);
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json([]);
 
   try {
-    const data = await getValues(`${kelas}!A2:A`);
-    return NextResponse.json(data.map(r => r[0]).filter(Boolean).sort((a, b) => a.localeCompare(b, 'id')));
+    const rows = throwIfError(await db().from('siswa').select('nama').eq('kelas', kelas));
+    return NextResponse.json(rows.map(r => r.nama).sort((a, b) => a.localeCompare(b, 'id')));
   } catch (e) {
     console.error('GET /api/siswa gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data siswa: ' + e.message }, { status: 500 });
@@ -31,23 +31,20 @@ export async function POST(req) {
   const namaFinal = nama.trim().toUpperCase();
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas} (demo, gak tersimpan)` });
-  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
-    // Lock per kelas — cegah 2 request tambah-siswa bareng (klik dobel/refresh cepat) lolos
-    // validasi nama-udah-ada bersamaan terus sama-sama nambah baris duplikat.
-    const result = await withLock(`siswa-${kelas}`, async () => {
-      const existing = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-      if (existing.includes(namaFinal)) return { sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' };
+    const angkatan = new Date().getFullYear() - (KELAS_LIST.indexOf(kelas)); // KELAS 1 -> tahun ini, KELAS 2 -> tahun lalu, dst
+    // unique(nama, kelas) di tabel siswa yang nolak duplikat — gak perlu lock manual kayak versi Sheets,
+    // constraint DB nolak insert kedua kalau ada 2 request bareng, salah satunya bakal dapet error 23505.
+    const { error } = await db().from('siswa').insert({ nama: namaFinal, kelas, angkatan });
+    if (error) {
+      if (error.code === '23505') return NextResponse.json({ sukses: false, pesan: 'Nama siswa sudah ada di kelas ini' });
+      throw new Error(error.message);
+    }
 
-      const header = (await getValues(`${kelas}!1:1`))[0] || [];
-      const row = header[1] === 'Angkatan' ? [namaFinal, new Date().getFullYear()] : [namaFinal];
-      await appendRow(kelas, row);
-      return { sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` };
-    });
-
-    if (result.sukses) await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
-    return NextResponse.json(result);
+    await logAction(session.username, 'tambah-siswa', kelas, namaFinal, '', '', '');
+    return NextResponse.json({ sukses: true, pesan: `${namaFinal} berhasil ditambahkan ke ${kelas}` });
   } catch (e) {
     console.error('POST /api/siswa gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal tambah siswa: ' + e.message });
@@ -61,14 +58,14 @@ export async function DELETE(req) {
 
   const { kelas, nama } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus (demo, gak tersimpan)` });
-  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
-    const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-    const idx = names.indexOf(nama);
-    if (idx === -1) return NextResponse.json({ sukses: false, pesan: 'Siswa tidak ditemukan' });
+    // on delete cascade di tabel pembayaran — hapus siswa otomatis ikut hapus semua data pembayarannya
+    const { error, count } = await db().from('siswa').delete({ count: 'exact' }).eq('kelas', kelas).eq('nama', nama);
+    if (error) throw new Error(error.message);
+    if (!count) return NextResponse.json({ sukses: false, pesan: 'Siswa tidak ditemukan' });
 
-    await deleteRow(kelas, idx + 2);
     await logAction(session.username, 'hapus-siswa', kelas, nama, '', '', '');
     return NextResponse.json({ sukses: true, pesan: `${nama} berhasil dihapus` });
   } catch (e) {

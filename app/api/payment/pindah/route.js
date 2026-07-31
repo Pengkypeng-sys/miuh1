@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, findRow, isKelasValid } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
 import { getSession } from '@/lib/auth';
-import { logAction, tanggalJakarta } from '@/lib/log';
+import { logAction } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
 
 // Pindahin nominal dari 1 item ke item lain buat siswa yang sama — buat koreksi salah pilih item pas input.
@@ -16,18 +16,25 @@ export async function POST(req) {
   }
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pembayaran dipindahkan (demo, gak tersimpan)' });
-  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
-    const row = await findRow(kelas, siswa);
-    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
+    const siswaId = await findSiswaId(kelas, siswa);
+    if (!siswaId) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-    const [dariNama, keNama] = await Promise.all([
-      getValues(`${kelas}!${colToLetter(dariKolom)}1`).then(v => v[0]?.[0] || ''),
-      getValues(`${kelas}!${colToLetter(keKolom)}1`).then(v => v[0]?.[0] || ''),
+    const [dariItem, keItem] = await Promise.all([
+      db().from('item_pembayaran').select('nama').eq('id', dariKolom).maybeSingle().then(r => throwIfError(r)),
+      db().from('item_pembayaran').select('nama').eq('id', keKolom).maybeSingle().then(r => throwIfError(r)),
     ]);
-    const dariLama = Number((await getValues(`${kelas}!${colToLetter(dariKolom)}${row}`))[0]?.[0]) || 0;
-    const keLama = Number((await getValues(`${kelas}!${colToLetter(keKolom)}${row}`))[0]?.[0]) || 0;
+    const dariNama = dariItem?.nama || '';
+    const keNama = keItem?.nama || '';
+
+    const [dariRow, keRow] = await Promise.all([
+      db().from('pembayaran').select('nominal').eq('siswa_id', siswaId).eq('item_id', dariKolom).maybeSingle().then(r => throwIfError(r)),
+      db().from('pembayaran').select('nominal').eq('siswa_id', siswaId).eq('item_id', keKolom).maybeSingle().then(r => throwIfError(r)),
+    ]);
+    const dariLama = dariRow?.nominal || 0;
+    const keLama = keRow?.nominal || 0;
 
     let pindah = Number(nominal);
     if (!pindah || pindah <= 0) pindah = dariLama;
@@ -35,15 +42,12 @@ export async function POST(req) {
 
     const dariBaru = dariLama - pindah;
     const keBaru = keLama + pindah;
+    const now = new Date().toISOString();
 
-    await setValues(`${kelas}!${colToLetter(dariKolom)}${row}`, [[dariBaru]]);
-    await setValues(`${kelas}!${colToLetter(keKolom)}${row}`, [[keBaru]]);
-    await highlightCell(kelas, row, keKolom, { yellow: true, numberFormat: true });
-    if (dariBaru === 0) await highlightCell(kelas, row, dariKolom, { yellow: false });
-
-    const tsCol = await getOrCreateTimestampColumn(kelas);
-    const { tanggal } = tanggalJakarta();
-    await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggal]], true);
+    await Promise.all([
+      db().from('pembayaran').upsert({ siswa_id: siswaId, item_id: dariKolom, nominal: dariBaru, terakhir_diisi: now }, { onConflict: 'siswa_id,item_id' }),
+      db().from('pembayaran').upsert({ siswa_id: siswaId, item_id: keKolom, nominal: keBaru, terakhir_diisi: now }, { onConflict: 'siswa_id,item_id' }),
+    ]);
 
     await logAction(session.username, 'pindah-pembayaran', kelas, siswa, `${dariNama} → ${keNama}`, dariLama, keBaru);
 

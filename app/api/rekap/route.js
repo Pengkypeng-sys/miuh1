@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, getSheetTitles, EXCLUDED_SHEETS, getTargetMap, getColumnLabels, colToLetter } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
@@ -17,90 +17,66 @@ export async function GET(req) {
 
   try {
     const today = tanggalJakarta().tanggal;
-    const titles = (await getSheetTitles()).filter(t => !EXCLUDED_SHEETS.includes(t) && (!kelasFilter || t === kelasFilter));
-    const targetMap = await getTargetMap();
+    const kelasList = kelasFilter ? [kelasFilter] : KELAS_LIST;
 
-    // Fase 1: ambil data semua kelas PARALEL (sebelumnya sequential per kelas — N kelas x M panggilan
-    // Sheets API jadi nunggu bergiliran, bikin /api/rekap bisa 10+ detik). Tiap kelas independen,
-    // gak saling butuh, jadi aman digas bareng.
-    const perKelasData = await Promise.all(titles.map(async (kelas) => {
-      const rows = await getValues(`${kelas}!A1:Z`);
-      if (rows.length < 1) return { kelas, kosong: true };
+    const [itemRows, siswaRows] = await Promise.all([
+      db().from('item_pembayaran').select('*').order('urutan').then(r => throwIfError(r)),
+      db().from('siswa').select('id, nama, kelas').in('kelas', kelasList).then(r => throwIfError(r)),
+    ]);
 
-      const header = rows[0];
-      const tsColIdx = header.indexOf('Terakhir Diisi'); // 0-based, -1 kalau belum ada
-      const angkatanIdx = header.indexOf('Angkatan');
-      const itemColStartIdx = angkatanIdx !== -1 ? angkatanIdx + 1 : 1; // lewatin kolom Angkatan kalau ada
-      const itemColEndIdx = tsColIdx !== -1 ? tsColIdx : header.length; // exclusive, 0-based
+    const perKelas = kelasList.map(kelas => ({ kelas, totalSiswa: 0, lunasCount: 0, persenLunas: 0 }));
+    const perKelasIdx = Object.fromEntries(perKelas.map((k, i) => [k.kelas, i]));
 
-      const itemCols = [];
-      for (let i = itemColStartIdx; i < itemColEndIdx; i++) itemCols.push(i + 1);
+    const itemMap = {};
+    itemRows.forEach(it => {
+      itemMap[it.id] = { kolom: it.id, nama: it.nama, terisi: 0, nominal: 0 };
+      if (VARIAN_ITEMS.includes(it.nama)) itemMap[it.id].varian = {};
+    });
 
-      const dataRows = rows.slice(1);
-      const varianCols = itemCols.filter(kolom => VARIAN_ITEMS.includes(header[kolom - 1]));
-      const labelsByCol = {};
-      // 1-2 kolom varian per kelas — ambil paralel juga, bukan gantian.
-      await Promise.all(varianCols.map(async (kolom) => {
-        labelsByCol[kolom] = await getColumnLabels(kelas, colToLetter(kolom), dataRows.length);
-      }));
-
-      return { kelas, kosong: false, header, tsColIdx, itemCols, varianCols, labelsByCol, dataRows };
-    }));
-
-    // Fase 2: gabungin hasil — sinkron, cepet, gak ada panggilan API di sini lagi.
-    const itemMap = {}; // kolom -> {kolom, nama, terisi, nominal}
-    const perKelas = [];
     const bayarHariIni = [];
 
-    for (const d of perKelasData) {
-      if (d.kosong) { perKelas.push({ kelas: d.kelas, totalSiswa: 0, lunasCount: 0, persenLunas: 0 }); continue; }
-      const { kelas, header, tsColIdx, itemCols, varianCols, labelsByCol, dataRows } = d;
+    if (siswaRows.length > 0) {
+      const siswaIds = siswaRows.map(s => s.id);
+      const pembayaranRows = throwIfError(
+        await db().from('pembayaran').select('siswa_id, item_id, nominal, keterangan, terakhir_diisi').in('siswa_id', siswaIds)
+      );
 
-      itemCols.forEach(kolom => {
-        const nama = header[kolom - 1];
-        if (!itemMap[kolom]) itemMap[kolom] = { kolom, nama, terisi: 0, nominal: 0 };
-        if (varianCols.includes(kolom) && !itemMap[kolom].varian) itemMap[kolom].varian = {};
-      });
+      const paymentsBySiswa = {};
+      pembayaranRows.forEach(p => {
+        if (!paymentsBySiswa[p.siswa_id]) paymentsBySiswa[p.siswa_id] = {};
+        paymentsBySiswa[p.siswa_id][p.item_id] = p;
 
-      let lunasCount = 0, totalSiswa = 0;
-      dataRows.forEach((r, ri) => {
-        const nama = r[0];
-        if (!nama) return;
-        totalSiswa++;
-        let semuaLunas = true;
-        itemCols.forEach(kolom => {
-          const val = r[kolom - 1];
-          const nama2 = header[kolom - 1];
-          const status = hitungStatus(val, targetMap[nama2]);
-          if (val !== '' && val !== undefined && val !== null) {
-            itemMap[kolom].terisi++;
-            itemMap[kolom].nominal += Number(val) || 0;
-
-            if (varianCols.includes(kolom)) {
-              const label = labelsByCol[kolom][ri] || 'Tanpa keterangan';
-              if (!itemMap[kolom].varian[label]) itemMap[kolom].varian[label] = { label, terisi: 0, nominal: 0 };
-              itemMap[kolom].varian[label].terisi++;
-              itemMap[kolom].varian[label].nominal += Number(val) || 0;
-            }
+        const item = itemMap[p.item_id];
+        if (item) {
+          item.terisi++;
+          item.nominal += Number(p.nominal) || 0;
+          if (item.varian) {
+            const label = p.keterangan || 'Tanpa keterangan';
+            if (!item.varian[label]) item.varian[label] = { label, terisi: 0, nominal: 0 };
+            item.varian[label].terisi++;
+            item.varian[label].nominal += Number(p.nominal) || 0;
           }
-          if (status !== 'lunas') semuaLunas = false;
-        });
-        if (semuaLunas && itemCols.length > 0) lunasCount++;
+        }
 
-        if (tsColIdx !== -1 && r[tsColIdx] === today) {
-          itemCols.forEach(kolom => {
-            const val = r[kolom - 1];
-            if (val !== '' && val !== undefined && val !== null) {
-              const label = varianCols.includes(kolom) ? labelsByCol[kolom][ri] : '';
-              const item = label ? `${header[kolom - 1]} (${label})` : header[kolom - 1];
-              bayarHariIni.push({ kelas, siswa: nama, item, nominal: Number(val) || 0 });
-            }
-          });
+        if (p.terakhir_diisi && tanggalJakarta(new Date(p.terakhir_diisi)).tanggal === today) {
+          const siswaInfo = siswaRows.find(s => s.id === p.siswa_id);
+          const itemInfo = itemMap[p.item_id];
+          const label = itemInfo?.varian && p.keterangan ? `${itemInfo.nama} (${p.keterangan})` : itemInfo?.nama;
+          if (siswaInfo && itemInfo) bayarHariIni.push({ kelas: siswaInfo.kelas, siswa: siswaInfo.nama, item: label, nominal: Number(p.nominal) || 0 });
         }
       });
 
-      perKelas.push({ kelas, totalSiswa, lunasCount, persenLunas: totalSiswa > 0 ? Math.round((lunasCount / totalSiswa) * 100) : 0 });
+      siswaRows.forEach(s => {
+        const idx = perKelasIdx[s.kelas];
+        perKelas[idx].totalSiswa++;
+        const applicableItems = itemRows.filter(it => !it.kelas_scope || it.kelas_scope.includes(s.kelas));
+        const pay = paymentsBySiswa[s.id] || {};
+        const semuaLunas = applicableItems.length > 0 && applicableItems.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');
+        if (semuaLunas) perKelas[idx].lunasCount++;
+      });
     }
+
+    perKelas.forEach(k => { k.persenLunas = k.totalSiswa > 0 ? Math.round((k.lunasCount / k.totalSiswa) * 100) : 0; });
 
     const perItem = Object.values(itemMap).map(it => ({
       ...it,

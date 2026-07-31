@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getValues, getRowLabels, isKelasValid } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE } from '@/lib/demoData';
 
-// Ambil SEMUA nilai item siswa dalam 1 baris sekaligus (2 panggilan Sheets API total,
-// bukan 1 panggilan per item) — biar gak kena rate limit pas ganti-ganti siswa.
+// Ambil semua nilai item 1 siswa sekaligus (2 query total, bukan 1 query per item).
 export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
@@ -13,18 +12,22 @@ export async function GET(req) {
   const kelas = params.get('kelas'), siswa = params.get('siswa');
 
   if (DEMO_MODE) return NextResponse.json({});
-  if (!(await isKelasValid(kelas))) return NextResponse.json({});
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({});
 
-  const names = (await getValues(`${kelas}!A2:A`)).map(r => r[0]);
-  const idx = names.indexOf(siswa);
-  if (idx === -1) return NextResponse.json({});
+  try {
+    const siswaId = await findSiswaId(kelas, siswa);
+    if (!siswaId) return NextResponse.json({});
 
-  const row = idx + 2;
-  const values = (await getValues(`${kelas}!A${row}:Z${row}`))[0] || [];
-  const labels = await getRowLabels(kelas, row, values.length || 26);
-  const result = {};
-  const keterangan = {};
-  values.forEach((val, i) => { if (i >= 1) result[i + 1] = val; }); // kolom B dst (1-based)
-  labels.forEach((lbl, i) => { if (i >= 1 && lbl) keterangan[i + 1] = lbl; });
-  return NextResponse.json({ ...result, __keterangan: keterangan });
+    const rows = throwIfError(await db().from('pembayaran').select('item_id, nominal, keterangan').eq('siswa_id', siswaId));
+    const result = {};
+    const keterangan = {};
+    rows.forEach(r => {
+      result[r.item_id] = r.nominal;
+      if (r.keterangan) keterangan[r.item_id] = r.keterangan;
+    });
+    return NextResponse.json({ ...result, __keterangan: keterangan });
+  } catch (e) {
+    console.error('GET /api/payment/row gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data pembayaran: ' + e.message }, { status: 500 });
+  }
 }

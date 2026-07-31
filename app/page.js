@@ -2,13 +2,16 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
-import { onlyDigits, BUKU_KELAS_MAP } from '@/lib/format';
+import { onlyDigits, BUKU_KELAS_MAP, TAB_META } from '@/lib/format';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { LisensiExpiredScreen, LoginScreen } from '@/components/LoginScreen';
 import { Sidebar } from '@/components/Sidebar';
+import { UserMenu } from '@/components/UserMenu';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BayarTab } from '@/components/tabs/BayarTab';
 import { SiswaTab } from '@/components/tabs/SiswaTab';
+import { ItemTab } from '@/components/tabs/ItemTab';
+import { KenaikanTab } from '@/components/tabs/KenaikanTab';
 import { KasTab } from '@/components/tabs/KasTab';
 import { LogTab } from '@/components/tabs/LogTab';
 import { RekapTab } from '@/components/tabs/RekapTab';
@@ -18,14 +21,6 @@ const fadeSlide = {
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -10 },
   transition: { duration: 0.22, ease: 'easeOut' },
-};
-
-const TAB_META = {
-  bayar: { title: 'Pembayaran', desc: 'Input & kelola pembayaran per siswa', icon: 'money' },
-  siswa: { title: 'Kelola Siswa', desc: 'Tambah atau hapus data siswa', icon: 'students' },
-  kas: { title: 'Keuangan Harian', desc: 'Catatan uang masuk & keluar per hari', icon: 'wallet' },
-  log: { title: 'Log Aktivitas', desc: 'Riwayat semua perubahan data', icon: 'clock' },
-  rekap: { title: 'Rekap & Statistik', desc: 'Ringkasan pembayaran seluruh kelas', icon: 'chart' },
 };
 
 export default function Home() {
@@ -282,14 +277,14 @@ export default function Home() {
       .map(k => ({ kolom: k, nominal: onlyDigits(nominalPerItem[k]), mode: modePerItem[k] || 'tambah' }));
 
     if (ppdbOn && ppdbGel && ppdbGender && onlyDigits(ppdbNominal)) {
-      const item = itemList.find(i => i.nama === 'PPDB');
-      const keterangan = `GEL.${ppdbGel} ${ppdbGender === 'L' ? 'LAKI-LAKI' : 'PEREMPUAN'}`;
-      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(ppdbNominal), mode: 'tambah', keterangan });
+      const namaVarian = `PPDB GEL.${ppdbGel} ${ppdbGender === 'L' ? 'LAKI-LAKI' : 'PEREMPUAN'}`;
+      const item = itemList.find(i => i.nama === namaVarian);
+      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(ppdbNominal), mode: 'tambah' });
     }
     if (bukuOn && bukuKelasPilih && onlyDigits(bukuNominal)) {
-      const item = itemList.find(i => i.nama === 'BUKU');
-      const keterangan = BUKU_KELAS_MAP[bukuKelasPilih];
-      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(bukuNominal), mode: 'tambah', keterangan });
+      const namaVarian = BUKU_KELAS_MAP[bukuKelasPilih];
+      const item = itemList.find(i => i.nama === namaVarian);
+      if (item) daftarBayar.push({ kolom: item.kolom, nominal: onlyDigits(bukuNominal), mode: 'tambah' });
     }
     if (sppOn && onlyDigits(sppNominal)) {
       const item = itemList.find(i => i.nama === 'SPP');
@@ -482,7 +477,7 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'kas', 'log', 'rekap'] : ['bayar', 'kas', 'rekap'];
+  const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'rekap'] : ['bayar', 'kas', 'rekap'];
   const meta = TAB_META[tab];
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
@@ -531,6 +526,7 @@ export default function Home() {
             <h1><span className="ic-badge"><Icon name={meta.icon} size={16} /></span> {meta.title}</h1>
             <div className="desc">{meta.desc}</div>
           </div>
+          <UserMenu nama={nama} role={role} doLogout={doLogout} />
         </div>
 
         {lisensiPeringatan && (
@@ -543,6 +539,8 @@ export default function Home() {
           <motion.div className="main-content" key={tab} {...fadeSlide}>
             {tab === 'bayar' && <BayarTab p={p} />}
             {tab === 'siswa' && role === 'admin' && <SiswaTab p={p} />}
+            {tab === 'item' && role === 'admin' && <ItemTab p={p} />}
+            {tab === 'kenaikan' && role === 'admin' && <KenaikanTab p={p} />}
             {tab === 'kas' && <KasTab p={p} />}
             {tab === 'log' && role === 'admin' && <LogTab p={p} />}
             {tab === 'rekap' && <RekapTab p={p} />}

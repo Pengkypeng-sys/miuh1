@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { naikkanKelas } from '@/lib/sheets';
+import { naikkanKelas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getValues, setValues, colToLetter, highlightCell, getOrCreateTimestampColumn, getTargetMap, findRow, isKelasValid } from '@/lib/sheets';
+import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
 import { getSession } from '@/lib/auth';
-import { logAction, tanggalJakarta } from '@/lib/log';
+import { logAction } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
 
@@ -18,28 +18,40 @@ export async function POST(req) {
 
   let angka = Number(nominal);
   if (!Number.isFinite(angka) || angka < 0) return NextResponse.json({ sukses: false, pesan: 'Nominal gak valid' });
-  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
-    const row = await findRow(kelas, siswa);
-    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
+    const siswaId = await findSiswaId(kelas, siswa);
+    if (!siswaId) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-    const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
-    const oldValue = Number((await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0]) || 0;
+    const item = throwIfError(await db().from('item_pembayaran').select('nama, target').eq('id', kolom).maybeSingle());
+    if (!item) return NextResponse.json({ sukses: false, pesan: 'Item pembayaran tidak ditemukan' });
+    const itemName = item.nama;
 
     if (angka > 0 && angka < 1000) angka = angka * 1000;
     const isSet = mode === 'set';
-    const totalBaru = isSet ? angka : oldValue + angka;
+    const now = new Date().toISOString();
+    let totalBaru, oldValue;
 
-    await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [[totalBaru]]);
-    const pattern = keterangan ? `#,##0" (${keterangan})"` : null;
-    await highlightCell(kelas, row, kolom, { yellow: true, numberFormat: !pattern, numberFormatPattern: pattern });
+    if (isSet) {
+      // "set" = timpa nilai absolut (koreksi manual) — bukan operasi tambah, aman di-upsert biasa.
+      const existing = throwIfError(await db().from('pembayaran').select('nominal').eq('siswa_id', siswaId).eq('item_id', kolom).maybeSingle());
+      oldValue = existing?.nominal || 0;
+      totalBaru = angka;
+      throwIfError(await db().from('pembayaran').upsert(
+        { siswa_id: siswaId, item_id: kolom, nominal: totalBaru, keterangan: keterangan || null, terakhir_diisi: now },
+        { onConflict: 'siswa_id,item_id' }
+      ));
+    } else {
+      // "tambah" = nambah ke nilai yang ada. Pake RPC atomic (nominal = nominal + delta di 1 statement SQL)
+      // biar gak ada celah baca-hitung-tulis kalau 2 request nyerempet bareng (lost update).
+      totalBaru = throwIfError(await db().rpc('increment_pembayaran', {
+        p_siswa_id: siswaId, p_item_id: kolom, p_delta: angka, p_keterangan: keterangan || null, p_terakhir_diisi: now,
+      }));
+      oldValue = totalBaru - angka; // valid buat delta request ini sendiri, gak kepengaruh concurrent write lain
+    }
 
-    const tsCol = await getOrCreateTimestampColumn(kelas);
-    await setValues(`${kelas}!${colToLetter(tsCol)}${row}`, [[tanggalJakarta().tanggal]], true);
-
-    const targetMap = await getTargetMap();
-    const status = hitungStatus(totalBaru, targetMap[itemName]);
+    const status = hitungStatus(totalBaru, item.target);
     // Hindari label dobel kayak "BUKU (BUKU 2)" — kalau keterangan udah mulai sama nama item, tampilin keterangannya aja
     const itemLabel = keterangan
       ? (keterangan.toUpperCase().startsWith(itemName.toUpperCase()) ? keterangan : `${itemName} (${keterangan})`)
@@ -66,19 +78,19 @@ export async function DELETE(req) {
 
   const { kelas, siswa, kolom } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Data pembayaran ${siswa} berhasil dihapus (demo, gak tersimpan)` });
-  if (!(await isKelasValid(kelas))) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
-    const row = await findRow(kelas, siswa);
-    if (row === -1) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
+    const siswaId = await findSiswaId(kelas, siswa);
+    if (!siswaId) return NextResponse.json({ sukses: false, pesan: 'Nama siswa tidak ditemukan' });
 
-    const itemName = (await getValues(`${kelas}!${colToLetter(kolom)}1`))[0]?.[0] || '';
-    const oldValue = (await getValues(`${kelas}!${colToLetter(kolom)}${row}`))[0]?.[0] ?? '';
+    const item = throwIfError(await db().from('item_pembayaran').select('nama').eq('id', kolom).maybeSingle());
+    const existing = throwIfError(await db().from('pembayaran').select('nominal').eq('siswa_id', siswaId).eq('item_id', kolom).maybeSingle());
+    const oldValue = existing?.nominal ?? '';
 
-    await setValues(`${kelas}!${colToLetter(kolom)}${row}`, [['']]);
-    await highlightCell(kelas, row, kolom, { yellow: false });
+    throwIfError(await db().from('pembayaran').delete().eq('siswa_id', siswaId).eq('item_id', kolom));
 
-    await logAction(session.username, 'hapus-pembayaran', kelas, siswa, itemName, oldValue, '');
+    await logAction(session.username, 'hapus-pembayaran', kelas, siswa, item?.nama || '', oldValue, '');
     return NextResponse.json({ sukses: true, pesan: `Data pembayaran ${siswa} berhasil dihapus` });
   } catch (e) {
     console.error('DELETE /api/payment gagal:', e);

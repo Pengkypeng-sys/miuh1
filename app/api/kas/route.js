@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, appendRow, ensurePengeluaranSheet, ensureLogSheet, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
+import { db, throwIfError } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -35,8 +35,8 @@ function rekapPerItem(transaksiMasuk) {
     .sort((a, b) => b.total - a.total);
 }
 
-// Uang masuk hari ini = jumlah setoran dari sheet Log (aksi submit-pembayaran, delta baru-lama)
-// Uang keluar hari ini = jumlah dari sheet Pengeluaran
+// Uang masuk = delta baru-lama dari log_aktivitas (aksi submit-pembayaran/edit-*)
+// Uang keluar = tabel pengeluaran
 export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
@@ -48,34 +48,33 @@ export async function GET(req) {
   const semua = tanggal === 'semua';
 
   try {
-    await Promise.all([ensurePengeluaranSheet(), ensureLogSheet()]);
     const [logRows, pengeluaranRows] = await Promise.all([
-      getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID),
-      getValues('Pengeluaran!A2:D', SYSTEM_SPREADSHEET_ID),
+      db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').then(r => throwIfError(r)),
+      db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh').then(r => throwIfError(r)),
     ]);
 
     const transaksiMasuk = [];
     let masuk = 0;
     logRows.forEach(r => {
-      const [waktu, user, aksi, kelas, siswa, item, lama, baru, metode] = r;
-      if (typeof waktu !== 'string' || !waktu) return;
-      if (!semua && !waktu.startsWith(tanggal)) return;
-      if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(aksi)) return;
-      const delta = (Number(baru) || 0) - (Number(lama) || 0);
+      if (!r.waktu) return;
+      if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+      const { tanggal: tgl, jam } = tanggalJakarta(new Date(r.waktu));
+      if (!semua && tgl !== tanggal) return;
+      const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
       if (delta <= 0) return;
       masuk += delta;
-      transaksiMasuk.push({ tanggal: waktu.split(' ')[0] || '', jam: waktu.split(' ')[1] || '', user, kelas, siswa, item, nominal: delta, metode: metode || '-' });
+      transaksiMasuk.push({ tanggal: tgl, jam, user: r.user_name, kelas: r.kelas, siswa: r.siswa, item: r.item, nominal: delta, metode: r.metode || '-' });
     });
 
     const transaksiKeluar = [];
     let keluar = 0;
     pengeluaranRows.forEach(r => {
-      const [tgl, keterangan, nominal, user] = r;
-      if (!tgl) return;
+      if (!r.tanggal) return;
+      const tgl = r.tanggal.split('-').reverse().join('/'); // 'YYYY-MM-DD' (Postgres date) -> 'DD/MM/YYYY'
       if (!semua && tgl !== tanggal) return;
-      const n = Number(nominal) || 0;
+      const n = Number(r.nominal) || 0;
       keluar += n;
-      transaksiKeluar.push({ tanggal: tgl, keterangan, nominal: n, user });
+      transaksiKeluar.push({ tanggal: tgl, keterangan: r.keterangan, nominal: n, user: r.dicatat_oleh });
     });
 
     return NextResponse.json({
@@ -101,10 +100,7 @@ export async function POST(req) {
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pengeluaran dicatat (demo, gak tersimpan)' });
 
   try {
-    await ensurePengeluaranSheet();
-    const { tanggal } = tanggalJakarta();
-    await appendRow('Pengeluaran', [tanggal, keterangan, Number(nominal), session.username], true, SYSTEM_SPREADSHEET_ID);
-
+    throwIfError(await db().from('pengeluaran').insert({ keterangan, nominal: Number(nominal), dicatat_oleh: session.username }));
     return NextResponse.json({ sukses: true, pesan: `Pengeluaran "${keterangan}" - Rp ${Number(nominal).toLocaleString('id-ID')} dicatat` });
   } catch (e) {
     console.error('POST /api/kas gagal:', e);

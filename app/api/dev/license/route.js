@@ -12,8 +12,13 @@ export async function POST(req) {
   if (!cekPasscode(passcode)) {
     return NextResponse.json({ sukses: false, pesan: 'Passcode salah' }, { status: 401 });
   }
-  const tanggalExpiry = await getLicenseExpiry();
-  return NextResponse.json({ sukses: true, tanggalExpiry });
+  try {
+    const tanggalExpiry = await getLicenseExpiry();
+    return NextResponse.json({ sukses: true, tanggalExpiry });
+  } catch (e) {
+    console.error('POST /api/dev/license gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data lisensi: ' + e.message });
+  }
 }
 
 export async function PUT(req) {
@@ -24,6 +29,11 @@ export async function PUT(req) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalExpiry)) {
     return NextResponse.json({ sukses: false, pesan: 'Format tanggal harus YYYY-MM-DD' });
   }
-  await setLicenseExpiry(tanggalExpiry);
-  return NextResponse.json({ sukses: true, pesan: `Masa aktif diupdate jadi ${tanggalExpiry}` });
+  try {
+    await setLicenseExpiry(tanggalExpiry);
+    return NextResponse.json({ sukses: true, pesan: `Masa aktif diupdate jadi ${tanggalExpiry}` });
+  } catch (e) {
+    console.error('PUT /api/dev/license gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal update lisensi: ' + e.message });
+  }
 }

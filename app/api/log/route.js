@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, ensureLogSheet, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
+import { db, throwIfError } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -22,14 +22,17 @@ export async function GET(req) {
   const semua = tanggal === 'semua';
 
   try {
-    await ensureLogSheet();
-    const rows = await getValues('Log!A2:I', SYSTEM_SPREADSHEET_ID);
+    const rows = throwIfError(
+      await db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').order('waktu', { ascending: false })
+    );
 
     let entries = rows
-      .filter(r => typeof r[0] === 'string' && r[0])
-      .filter(r => semua || r[0].startsWith(tanggal))
-      .map(r => ({ waktu: r[0], user: r[1], aksi: r[2], kelas: r[3], siswa: r[4], item: r[5], lama: r[6], baru: r[7], metode: r[8] }))
-      .sort((a, b) => b.waktu.localeCompare(a.waktu));
+      .filter(r => r.waktu)
+      .map(r => {
+        const { tanggal: tgl, jam } = tanggalJakarta(new Date(r.waktu));
+        return { waktu: `${tgl} ${jam}`, user: r.user_name, aksi: r.aksi, kelas: r.kelas, siswa: r.siswa, item: r.item, lama: r.lama, baru: r.baru, metode: r.metode };
+      })
+      .filter(e => semua || e.waktu.startsWith(tanggal));
 
     const total = entries.length;
     const dipotong = entries.length > 200;

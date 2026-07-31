@@ -153,17 +153,20 @@ export function BayarTab({ p }) {
             )}
           </div>
 
-          {itemList.filter(i => i.nama !== 'PPDB' && i.nama !== 'BUKU' && i.nama !== 'SPP').map(i => {
+          <div className="checkout-grid">
+          {itemList.filter(i => !i.nama.startsWith('PPDB') && !i.nama.startsWith('BUKU') && i.nama !== 'SPP').map(i => {
             const checked = checkedItems.has(i.kolom);
             const val = Number(itemValues[i.kolom]) || 0;
             const status = hitungStatus(val, i.target);
             return (
-              <div key={i.kolom} className={`checkout-row ${checked ? 'checked' : ''}`}>
+              <div key={i.kolom} className={`checkout-row ${checked ? 'checked full' : ''}`}>
                 <label className="checkout-check">
                   <input type="checkbox" checked={checked} onChange={() => toggleCheckedItem(i.kolom)} />
                   <Icon name={i.icon || 'receipt'} size={13} />
                   <span className="nm">{i.nama}</span>
-                  <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓' : status === 'cicil' ? 'nyicil' : 'belum'}</span>
+                  {status !== 'belum' && (
+                    <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓ lunas' : 'nyicil'}</span>
+                  )}
                 </label>
                 {checked && (
                   <>
@@ -188,6 +191,7 @@ export function BayarTab({ p }) {
               </div>
             );
           })}
+          </div>
         </div>
 
         <label>Metode Pembayaran</label>
@@ -223,7 +227,12 @@ export function BayarTab({ p }) {
           </div>
         )}
         {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
-          {itemList.map(i => {
+          {itemList.filter(i => {
+            // Item varian PPDB/BUKU (6+3 kemungkinan) cuma ditampilin kalau siswa ini emang punya
+            // catatan bayar di varian itu — kalau semua ditampilin defaultnya numpuk 9 baris "belum bayar".
+            const isVarian = i.nama.startsWith('PPDB') || i.nama.startsWith('BUKU');
+            return !isVarian || Number(itemValues[i.kolom]) > 0;
+          }).map(i => {
             const val = Number(itemValues[i.kolom]) || 0;
             const ket = itemValues.__keterangan?.[i.kolom];
             const target = targetSebenarnya(i.nama, ket, i.target);
@@ -237,10 +246,13 @@ export function BayarTab({ p }) {
                 whileTap={{ scale: 0.985 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="nm" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
-                    <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
-                      {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
+                  <div className="nm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {status !== 'belum' && <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : 'Nyicil'}</span>}
+                      <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
+                        {val ? rp(val) : 'Belum bayar'}{target ? `${val ? ' / ' : ' / '}${rp(target)}` : ''}
+                      </span>
                     </span>
                   </div>
                   {status === 'cicil' && (

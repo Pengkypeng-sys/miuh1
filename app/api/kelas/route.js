@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetTitles, EXCLUDED_SHEETS } from '@/lib/sheets';
+import { KELAS_LIST } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE, DEMO_KELAS } from '@/lib/demoData';
 
@@ -9,6 +9,7 @@ export async function GET() {
 
   if (DEMO_MODE) return NextResponse.json(DEMO_KELAS);
 
-  const titles = await getSheetTitles();
-  return NextResponse.json(titles.filter(t => !EXCLUDED_SHEETS.includes(t)));
+  // Kelas cuma 6 nama tetap (KELAS 1..6) — gak perlu query, ALUMNI sengaja gak dimasukin
+  // (siswa yang udah lulus gak muncul di listing pembayaran/kelola siswa aktif).
+  return NextResponse.json(KELAS_LIST);
 }

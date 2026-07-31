@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getValues, SYSTEM_SPREADSHEET_ID } from '@/lib/sheets';
+import { db, throwIfError } from '@/lib/db';
 import { hashPassword, signSession, setSessionCookie } from '@/lib/auth';
 import { DEMO_MODE, DEMO_USERS } from '@/lib/demoData';
 import { statusLisensi } from '@/lib/license';
 
 export async function POST(req) {
-  const lisensi = DEMO_MODE ? { expired: false, peringatan: false, hariTersisa: 99, tanggalExpiry: '-' } : await statusLisensi();
+  let lisensi;
+  try {
+    lisensi = DEMO_MODE ? { expired: false, peringatan: false, hariTersisa: 99, tanggalExpiry: '-' } : await statusLisensi();
+  } catch (e) {
+    console.error('POST /api/login gagal cek lisensi:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal cek status lisensi, coba lagi: ' + e.message });
+  }
   if (lisensi.expired) {
     return NextResponse.json({ sukses: false, expired: true, pesan: `Masa aktif dashboard sudah habis (${lisensi.tanggalExpiry}). Hubungi admin buat perpanjang.` });
   }
@@ -23,18 +29,22 @@ export async function POST(req) {
     return NextResponse.json({ sukses: true, nama: u.nama, role: u.role, lisensi });
   }
 
-  const data = await getValues('Users!A2:D', SYSTEM_SPREADSHEET_ID);
-  const hashed = hashPassword(password);
-  const row = data.find(r => String(r[0]) === String(username) && String(r[1]) === hashed);
+  try {
+    const hashed = hashPassword(password);
+    const row = throwIfError(await db().from('users').select('nama, role, password_hash').eq('username', username).maybeSingle());
 
-  if (!row) {
-    return NextResponse.json({ sukses: false, pesan: 'Username atau password salah' });
+    if (!row || row.password_hash !== hashed) {
+      return NextResponse.json({ sukses: false, pesan: 'Username atau password salah' });
+    }
+
+    const nama = row.nama || username;
+    const role = row.role || 'staf';
+    const token = signSession({ username, nama, role });
+    await setSessionCookie(token);
+
+    return NextResponse.json({ sukses: true, nama, role, lisensi });
+  } catch (e) {
+    console.error('POST /api/login gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal login: ' + e.message });
   }
-
-  const nama = row[2] || username;
-  const role = row[3] || 'staf';
-  const token = signSession({ username, nama, role });
-  await setSessionCookie(token);
-
-  return NextResponse.json({ sukses: true, nama, role, lisensi });
 }
