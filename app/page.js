@@ -1,9 +1,17 @@
 'use client';
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { animate as animeAnimate } from 'animejs';
-import { hitungStatus } from '@/lib/target';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
+import { onlyDigits, BUKU_KELAS_MAP } from '@/lib/format';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { LisensiExpiredScreen, LoginScreen } from '@/components/LoginScreen';
+import { Sidebar } from '@/components/Sidebar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { BayarTab } from '@/components/tabs/BayarTab';
+import { SiswaTab } from '@/components/tabs/SiswaTab';
+import { KasTab } from '@/components/tabs/KasTab';
+import { LogTab } from '@/components/tabs/LogTab';
+import { RekapTab } from '@/components/tabs/RekapTab';
 
 const fadeSlide = {
   initial: { opacity: 0, y: 10 },
@@ -12,36 +20,6 @@ const fadeSlide = {
   transition: { duration: 0.22, ease: 'easeOut' },
 };
 
-function BarFill({ pct, color }) {
-  return (
-    <div className="bar-track">
-      <motion.div
-        className="bar-fill"
-        style={color ? { background: color } : undefined}
-        initial={{ width: 0 }}
-        animate={{ width: `${pct}%` }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-      />
-    </div>
-  );
-}
-
-const STATUS_LABEL = { lunas: 'Lunas', cicil: 'Nyicil', belum: 'Belum bayar' };
-
-const rp = (n) => 'Rp ' + Number(n).toLocaleString('id-ID');
-const rpSigned = (n) => (n < 0 ? '-Rp ' + Math.abs(n).toLocaleString('id-ID') : 'Rp ' + n.toLocaleString('id-ID'));
-const initials = (name) => (name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-const onlyDigits = (s) => s.replace(/\D/g, '');
-const formatRibuan = (s) => onlyDigits(s).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-// Nominal singkat buat chip sempit: 150000 -> "150rb", 1200000 -> "1,2jt"
-const rpSingkat = (n) => {
-  if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1).replace('.', ',') + 'jt';
-  if (n >= 1000) return Math.round(n / 1000) + 'rb';
-  return String(n);
-};
-const ddmmyyyyToIso = (s) => { const [d, m, y] = s.split('/'); return `${y}-${m}-${d}`; };
-const isoToDdmmyyyy = (s) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; };
-
 const TAB_META = {
   bayar: { title: 'Pembayaran', desc: 'Input & kelola pembayaran per siswa', icon: 'money' },
   siswa: { title: 'Kelola Siswa', desc: 'Tambah atau hapus data siswa', icon: 'students' },
@@ -49,43 +27,6 @@ const TAB_META = {
   log: { title: 'Log Aktivitas', desc: 'Riwayat semua perubahan data', icon: 'clock' },
   rekap: { title: 'Rekap & Statistik', desc: 'Ringkasan pembayaran seluruh kelas', icon: 'chart' },
 };
-
-const AKSI_LABEL = {
-  'submit-pembayaran': { label: 'Setor Pembayaran', color: 'lunas' },
-  'edit-langsung': { label: 'Koreksi Nilai', color: 'cicil' },
-  'edit-manual': { label: 'Edit Langsung di Sheet', color: 'cicil' },
-  'hapus-pembayaran': { label: 'Hapus Pembayaran', color: 'belum' },
-  'pindah-pembayaran': { label: 'Pindah Item', color: 'cicil' },
-  'tambah-siswa': { label: 'Tambah Siswa', color: 'lunas' },
-  'hapus-siswa': { label: 'Hapus Siswa', color: 'belum' },
-};
-
-function LoginLogo() {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    animeAnimate(ref.current, {
-      scale: [0.6, 1],
-      rotate: [-8, 0],
-      opacity: [0, 1],
-      duration: 700,
-      ease: 'outElastic(1, .6)',
-    });
-  }, []);
-  return <img ref={ref} src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />;
-}
-
-function LoadingScreen() {
-  return (
-    <div className="login-shell">
-      <motion.div className="loading-box" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
-        <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />
-        <span className="spinner" style={{ width: 22, height: 22, marginTop: 14 }} />
-        <div className="loading-txt">Memuat dashboard...</div>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -123,27 +64,6 @@ export default function Home() {
   const [sppNominal, setSppNominal] = useState('');
   const [tabunganOn, setTabunganOn] = useState(false);
   const [tabunganNominal, setTabunganNominal] = useState('');
-  const BULAN_LIST = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  const BUKU_KELAS_MAP = { 'KELAS 1': 'BUKU 1', 'KELAS 2': 'BUKU 1', 'KELAS 3': 'BUKU 2', 'KELAS 4': 'BUKU 2', 'KELAS 5': 'BUKU 3', 'KELAS 6': 'BUKU 3' };
-  const PPDB_HARGA_ACUAN = { '1-L': 940000, '2-L': 1550000, '3-L': 1175000, '1-P': 1035000, '2-P': 1165000, '3-P': 1295000 };
-  const BUKU_HARGA_ACUAN = { 'KELAS 1': 400000, 'KELAS 2': 400000, 'KELAS 3': 480000, 'KELAS 4': 480000, 'KELAS 5': 475000, 'KELAS 6': 475000 };
-  const BUKU_LABEL_HARGA = { 'BUKU 1': 400000, 'BUKU 2': 480000, 'BUKU 3': 475000 };
-  const ITEM_ICONS = ['receipt', 'money', 'wallet', 'book', 'layers', 'case', 'students', 'chart'];
-  const ITEM_KATEGORI = ['Wajib', 'Opsional', 'Ekstrakurikuler', 'Lainnya'];
-  // Target harga PPDB/BUKU beda-beda per varian (Gel/Kelas), tapi TargetHarga sheet cuma nyimpen 1 acuan.
-  // Baca varian asli dari keterangan yang kesimpen di format cell (mis. "GEL.3 LAKI-LAKI"), baru cari harga aslinya.
-  function targetSebenarnya(namaItem, ket, fallback) {
-    if (!ket) return fallback;
-    if (namaItem === 'PPDB') {
-      const m = ket.match(/GEL\.?(\d)\s+(LAKI-LAKI|PEREMPUAN)/i);
-      if (m) return PPDB_HARGA_ACUAN[`${m[1]}-${m[2].toUpperCase().startsWith('L') ? 'L' : 'P'}`] || fallback;
-    }
-    if (namaItem === 'BUKU') {
-      const m = ket.match(/BUKU\s*(\d)/i);
-      if (m) return BUKU_LABEL_HARGA[`BUKU ${m[1]}`] || fallback;
-    }
-    return fallback;
-  }
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
@@ -550,112 +470,59 @@ export default function Home() {
   }
 
   if (checking) return <LoadingScreen />;
-
-  if (lisensiExpired) {
-    return (
-      <div className="login-shell">
-        <div className="card" style={{ textAlign: 'center' }}>
-          <div className="license-lock-icon">🔒</div>
-          <h2>Masa Aktif Habis</h2>
-          <div className="subtitle" style={{ marginBottom: 0 }}>{lisensiPesan}</div>
-        </div>
-      </div>
-    );
-  }
-
+  if (lisensiExpired) return <LisensiExpiredScreen pesan={lisensiPesan} />;
   if (!loggedIn) {
     return (
-      <div className="login-shell">
-        <motion.div
-          className="card"
-          initial={{ opacity: 0, y: 24, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.45, ease: 'easeOut' }}
-        >
-          <LoginLogo />
-          <h2>Dashboard Pembayaran Siswa</h2>
-          <div className="subtitle">MI Unwanul Huda 1 — Masuk untuk mengelola data pembayaran</div>
-          <label>Username</label>
-          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="username" />
-          <label>Password</label>
-          <div className="password-field">
-            <input
-              type={showPassword ? 'text' : 'password'} value={password}
-              onChange={e => setPassword(e.target.value)} placeholder="password"
-              onKeyDown={e => e.key === 'Enter' && doLogin()}
-            />
-            <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}>
-              <Icon name={showPassword ? 'eyeOff' : 'eye'} size={17} />
-            </button>
-          </div>
-          <button onClick={doLogin}>Masuk</button>
-          {loginMsg && <div className="status gagal">{loginMsg}</div>}
-        </motion.div>
-      </div>
+      <LoginScreen
+        username={username} setUsername={setUsername}
+        password={password} setPassword={setPassword}
+        showPassword={showPassword} setShowPassword={setShowPassword}
+        loginMsg={loginMsg} doLogin={doLogin}
+      />
     );
   }
-
-  const totalTerkumpul = rekap ? rekap.perItem.reduce((s, i) => s + i.nominal, 0) : 0;
-  const totalSiswaSemua = rekap ? rekap.perKelas.reduce((s, k) => s + k.totalSiswa, 0) : 0;
-  const rataPersenLunas = rekap && rekap.perKelas.length
-    ? Math.round(rekap.perKelas.reduce((s, k) => s + k.persenLunas, 0) / rekap.perKelas.length)
-    : 0;
 
   const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'kas', 'log', 'rekap'] : ['bayar', 'kas', 'rekap'];
   const meta = TAB_META[tab];
 
+  // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
+  const p = {
+    kelas, setKelas, kelasList, siswa, setSiswa, siswaList,
+    ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
+    bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
+    sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
+    itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar,
+    itemValues, loadingRingkasan, kolom, setKolom,
+    showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
+
+    kelasSiswa, setKelasSiswa, namaBaru, setNamaBaru, tambahSiswa, loadingSiswa,
+    siswaHapus, setSiswaHapus, siswaHapusList, hapusSiswa, statusSiswa,
+    cariSiswaKelola, setCariSiswaKelola,
+    namaItemBaru, setNamaItemBaru, targetItemBaru, setTargetItemBaru,
+    iconItemBaru, setIconItemBaru, kategoriItemBaru, setKategoriItemBaru,
+    kelasItemBaru, setKelasItemBaru, tambahItem, loadingItem, statusItem,
+    editItemNama, setEditItemNama, editItemTargetVal, setEditItemTargetVal, simpanTargetItem,
+    ubahItemMeta, pindahUrutanItem, loadingUrutan, hapusItem,
+    kenaikanKelas, loadingKenaikan, statusKenaikan,
+
+    tanggalKas, setTanggalKas, kas, loadingKas, loadKas,
+    ketPengeluaran, setKetPengeluaran, nominalPengeluaran, setNominalPengeluaran,
+    loadingPengeluaran, tambahPengeluaran, statusKas,
+
+    tanggalLog, setTanggalLog, logData, loadingLog, loadLog,
+
+    rekap, loadRekap, rekapKelasFilter, setRekapKelasFilter,
+    kelasDetailPilih, setKelasDetailPilih, cariSiswaDetail, setCariSiswaDetail,
+    loadingDetail, kelasDetail, varianFilter, setVarianFilter,
+  };
+
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="logo-img" />
-          <div>Dashboard Pembayaran<br /><small>MI Unwanul Huda 1</small></div>
-        </div>
-
-        <div className="nav-section-label">Menu</div>
-        <nav>
-          {visibleTabs.map(t => (
-            <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)} style={{ position: 'relative' }}>
-              {tab === t && <motion.div layoutId="navPill" className="nav-pill" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-              <span className="ic" style={{ position: 'relative' }}><Icon name={TAB_META[t].icon} size={17} /></span>
-              <span style={{ position: 'relative' }}>{TAB_META[t].title}</span>
-            </div>
-          ))}
-        </nav>
-
-        <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(v => !v)} aria-label="Menu"><Icon name="menu" size={18} /></button>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="avatar">{initials(nama)}</div>
-            <div className="who">
-              <div className="n">{nama}</div>
-              <div className="r">{role}</div>
-            </div>
-          </div>
-          <a className="logout-link" onClick={doLogout}><Icon name="logout" size={15} /> <span className="lbl">Logout</span></a>
-        </div>
-      </aside>
-
-      {mobileMenuOpen && (
-        <>
-          <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />
-          <div className="mobile-menu-dropdown">
-            {visibleTabs.map(t => (
-              <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setMobileMenuOpen(false); }} style={{ position: 'relative' }}>
-                {tab === t && <div className="nav-pill" />}
-                <span className="ic" style={{ position: 'relative' }}><Icon name={TAB_META[t].icon} size={17} /></span>
-                <span style={{ position: 'relative' }}>{TAB_META[t].title}</span>
-              </div>
-            ))}
-            <div className="mobile-menu-user">
-              <div className="avatar">{initials(nama)}</div>
-              <div className="who"><div className="n">{nama}</div><div className="r">{role}</div></div>
-            </div>
-            <div className="nav-item" onClick={doLogout}><span className="ic"><Icon name="logout" size={17} /></span> Logout</div>
-          </div>
-        </>
-      )}
+      <Sidebar
+        visibleTabs={visibleTabs} tab={tab} setTab={setTab} nama={nama} role={role} doLogout={doLogout}
+        mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
+      />
 
       <div className="main">
         <div className="main-topbar">
@@ -673,842 +540,17 @@ export default function Home() {
         )}
 
         <AnimatePresence mode="wait">
-        <motion.div className="main-content" key={tab} {...fadeSlide}>
-          {tab === 'rekap' && (
-            <motion.div className="stat-grid" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.07 } } }}>
-              {[
-                { icon: 'case', color: 'blue', label: 'Total Kelas', value: rekap?.perKelas.length ?? '—' },
-                { icon: 'students', color: 'amber', label: 'Total Siswa', value: totalSiswaSemua || '—' },
-                { icon: 'money', color: 'green', label: 'Total Terkumpul', value: rp(totalTerkumpul), money: true },
-                { icon: 'check', color: 'rose', label: 'Rata² % Lunas', value: `${rataPersenLunas}%` },
-              ].map(s => (
-                <motion.div
-                  key={s.label} className="stat-tile"
-                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
-                >
-                  <div className={`icon-badge ${s.color}`}><Icon name={s.icon} size={20} /></div>
-                  <div><div className="label">{s.label}</div><div className={`value ${s.money ? 'value-money' : ''}`}>{s.value}</div></div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-
-          {tab === 'bayar' && (
-            <div className="bayar-grid">
-              <div className="panel">
-                <div className="panel-title"><span className="ic-badge"><Icon name="edit" size={14} /></span> Input Pembayaran</div>
-                <div className="panel-desc">Centang item yang dibayar (bisa lebih dari 1), isi nominalnya, pilih metode</div>
-
-                <label>Pilih Kelas</label>
-                <select value={kelas} onChange={e => setKelas(e.target.value)}>
-                  {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-
-                <label>Nama Siswa</label>
-                <div className="search-box">
-                  <span className="search-ic"><Icon name="search" size={15} /></span>
-                  <input
-                    list="daftar-siswa-bayar"
-                    value={siswa}
-                    onChange={e => setSiswa(e.target.value)}
-                    placeholder="ketik nama siswa..."
-                  />
-                </div>
-                <datalist id="daftar-siswa-bayar">
-                  {siswaList.map(s => <option key={s} value={s} />)}
-                </datalist>
-
-                <hr className="field-divider" />
-
-                <label>Item yang Dibayar <span style={{ fontWeight: 'normal', color: 'var(--muted)' }}>(nominal &lt;1000 otomatis dikali 1000)</span></label>
-                <div className="checkout-list">
-                  <div className="checkout-row">
-                    <label className="checkout-check">
-                      <input type="checkbox" checked={ppdbOn} onChange={e => { setPpdbOn(e.target.checked); if (!e.target.checked) { setPpdbGel(''); setPpdbGender(''); setPpdbNominal(''); } }} />
-                      <span className="nm">PPDB</span>
-                    </label>
-                    {ppdbOn && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
-                        <select value={ppdbGel} onChange={e => setPpdbGel(e.target.value)}>
-                          <option value="">Pilih Gelombang</option>
-                          <option value="1">Gel.1</option>
-                          <option value="2">Gel.2</option>
-                          <option value="3">Gel.3</option>
-                        </select>
-                        <select value={ppdbGender} onChange={e => setPpdbGender(e.target.value)}>
-                          <option value="">Pilih Jenis Kelamin</option>
-                          <option value="L">Laki-laki</option>
-                          <option value="P">Perempuan</option>
-                        </select>
-                        {ppdbGel && ppdbGender && (
-                          <>
-                            <input
-                              type="text" inputMode="numeric" className="checkout-nominal"
-                              placeholder="nominal PPDB"
-                              value={ppdbNominal}
-                              onChange={e => setPpdbNominal(formatRibuan(e.target.value))}
-                            />
-                            <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {PPDB_HARGA_ACUAN[`${ppdbGel}-${ppdbGender}`].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="checkout-row">
-                    <label className="checkout-check">
-                      <input type="checkbox" checked={bukuOn} onChange={e => { setBukuOn(e.target.checked); if (!e.target.checked) { setBukuKelasPilih(''); setBukuNominal(''); } }} />
-                      <span className="nm">BUKU</span>
-                    </label>
-                    {bukuOn && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
-                          {Object.keys(BUKU_KELAS_MAP).map(k => (
-                            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
-                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
-                              {k}
-                            </label>
-                          ))}
-                        </div>
-                        {bukuKelasPilih && (
-                          <>
-                            <input
-                              type="text" inputMode="numeric" className="checkout-nominal"
-                              placeholder={`nominal ${BUKU_KELAS_MAP[bukuKelasPilih]}`}
-                              value={bukuNominal}
-                              onChange={e => setBukuNominal(formatRibuan(e.target.value))}
-                            />
-                            <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {BUKU_HARGA_ACUAN[bukuKelasPilih].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="checkout-row">
-                    <label className="checkout-check">
-                      <input type="checkbox" checked={sppOn} onChange={e => { setSppOn(e.target.checked); if (!e.target.checked) { setSppBulan([]); setSppNominal(''); setTabunganOn(false); setTabunganNominal(''); } }} />
-                      <span className="nm">SPP</span>
-                    </label>
-                    {sppOn && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
-                          {BULAN_LIST.map(b => (
-                            <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400 }}>
-                              <input
-                                type="checkbox"
-                                checked={sppBulan.includes(b)}
-                                onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
-                              />
-                              {b}
-                            </label>
-                          ))}
-                        </div>
-                        <input
-                          type="text" inputMode="numeric" className="checkout-nominal"
-                          placeholder="nominal SPP"
-                          value={sppNominal}
-                          onChange={e => setSppNominal(formatRibuan(e.target.value))}
-                        />
-                        <label className="mode-toggle" style={{ width: '100%' }}>
-                          <input type="checkbox" checked={tabunganOn} onChange={e => { setTabunganOn(e.target.checked); if (!e.target.checked) setTabunganNominal(''); }} />
-                          Sertakan Tabungan Wajib
-                        </label>
-                        {tabunganOn && (
-                          <input
-                            type="text" inputMode="numeric" className="checkout-nominal"
-                            placeholder="nominal Tabungan Wajib"
-                            value={tabunganNominal}
-                            onChange={e => setTabunganNominal(formatRibuan(e.target.value))}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {itemList.filter(i => i.nama !== 'PPDB' && i.nama !== 'BUKU' && i.nama !== 'SPP').map(i => {
-                    const checked = checkedItems.has(i.kolom);
-                    const val = Number(itemValues[i.kolom]) || 0;
-                    const status = hitungStatus(val, i.target);
-                    return (
-                      <div key={i.kolom} className={`checkout-row ${checked ? 'checked' : ''}`}>
-                        <label className="checkout-check">
-                          <input type="checkbox" checked={checked} onChange={() => toggleCheckedItem(i.kolom)} />
-                          <Icon name={i.icon || 'receipt'} size={13} />
-                          <span className="nm">{i.nama}</span>
-                          <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓' : status === 'cicil' ? 'nyicil' : 'belum'}</span>
-                        </label>
-                        {checked && (
-                          <>
-                            <input
-                              type="text" inputMode="numeric" className="checkout-nominal"
-                              placeholder={modePerItem[i.kolom] === 'set' ? 'nilai total yang benar' : 'nominal setoran'}
-                              value={nominalPerItem[i.kolom] || ''}
-                              onChange={e => setNominalPerItem(prev => ({ ...prev, [i.kolom]: formatRibuan(e.target.value) }))}
-                            />
-                            {role === 'admin' && (
-                              <label className="mode-toggle">
-                                <input
-                                  type="checkbox"
-                                  checked={modePerItem[i.kolom] === 'set'}
-                                  onChange={e => setModePerItem(prev => ({ ...prev, [i.kolom]: e.target.checked ? 'set' : 'tambah' }))}
-                                />
-                                Timpa nilai langsung (koreksi salah input, bukan nambah)
-                              </label>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <label>Metode Pembayaran</label>
-                <select value={metodeBayar} onChange={e => setMetodeBayar(e.target.value)}>
-                  <option value="Cash">💵 Cash</option>
-                  <option value="Transfer">🏦 Transfer</option>
-                  <option value="QRIS">📱 QRIS</option>
-                </select>
-
-                <button disabled={loadingBtn} onClick={submitData} className="btn-icon">
-                  {loadingBtn ? <span className="spinner" /> : <Icon name="save" size={16} />} Simpan {checkedItems.size > 0 ? `(${checkedItems.size} item)` : ''}
-                </button>
-                {statusBayar && <div className={`status ${statusBayar.sukses ? 'sukses' : 'gagal'}`}>{statusBayar.pesan}</div>}
-              </div>
-
-              <div className="panel">
-                <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Ringkasan Pembayaran Siswa</div>
-                <div className="panel-desc">Status semua item untuk siswa yang dipilih</div>
-
-                {siswa && (
-                  <div className="siswa-card">
-                    <div className="avatar">{initials(siswa)}</div>
-                    <div>
-                      <div className="nm">{siswa}</div>
-                      <div className="kl">{kelas}</div>
-                    </div>
-                  </div>
-                )}
-
-                {loadingRingkasan && (
-                  <div className="item-status-list">
-                    {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
-                  </div>
-                )}
-                {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
-                  {itemList.map(i => {
-                    const val = Number(itemValues[i.kolom]) || 0;
-                    const ket = itemValues.__keterangan?.[i.kolom];
-                    const target = targetSebenarnya(i.nama, ket, i.target);
-                    const status = hitungStatus(val, target);
-                    const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
-                    const sisa = target ? val - target : null;
-                    return (
-                      <motion.div
-                        key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}
-                        variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
-                        whileTap={{ scale: 0.985 }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="nm" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
-                            <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
-                              {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
-                            </span>
-                          </div>
-                          {status === 'cicil' && (
-                            <>
-                              <div style={{ marginTop: 6, height: 6 }}>
-                                <BarFill pct={pct} color="var(--gold)" />
-                              </div>
-                              <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
-                                Sisa {rpSigned(sisa)}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>}
-
-                {role === 'admin' && siswa && kolom && Number(itemValues[kolom]) > 0 && (
-                  <div className="fix-actions">
-                    <button className="secondary btn-icon" style={{ width: 'auto' }} onClick={() => setShowPindah(v => !v)}>
-                      <Icon name="refresh" size={13} /> Salah pilih item? Pindahkan
-                    </button>
-
-                    {showPindah && (
-                      <div className="pindah-box">
-                        <div className="hint-text" style={{ marginTop: 0, marginBottom: 8 }}>
-                          Pindahkan dari "<b>{itemList.find(i => String(i.kolom) === String(kolom))?.nama}</b>" ke item lain
-                        </div>
-                        <select value={pindahKeKolom} onChange={e => setPindahKeKolom(e.target.value)}>
-                          <option value="">Pilih item tujuan...</option>
-                          {itemList.filter(i => String(i.kolom) !== String(kolom)).map(i => (
-                            <option key={i.kolom} value={i.kolom}>{i.nama}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="text" inputMode="numeric"
-                          placeholder={`nominal (kosongin = pindah semua Rp ${rp(itemValues[kolom])})`}
-                          value={pindahNominal}
-                          onChange={e => setPindahNominal(formatRibuan(e.target.value))}
-                        />
-                        <button disabled={loadingPindah} onClick={pindahPembayaran} className="btn-icon">
-                          {loadingPindah ? <span className="spinner" /> : <Icon name="refresh" size={14} />} Pindahkan Sekarang
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {role === 'admin' && siswa && kolom && (
-                  <button
-                    className="ghost-danger btn-icon"
-                    style={{ marginTop: 10 }}
-                    disabled={loadingBtn}
-                    onClick={hapusData}
-                  >
-                    <Icon name="trash" size={13} /> Hapus data "{itemList.find(i => String(i.kolom) === String(kolom))?.nama}" milik {siswa}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {tab === 'siswa' && role === 'admin' && (
-            <div className="bayar-grid">
-              <div className="panel">
-                <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Kelola Siswa</div>
-                <div className="panel-desc">Tambah atau hapus siswa dari kelas tertentu</div>
-
-                <label>Pilih Kelas</label>
-                <select value={kelasSiswa} onChange={e => setKelasSiswa(e.target.value)}>
-                  {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-
-                <label>Tambah Nama Siswa Baru</label>
-                <input value={namaBaru} onChange={e => setNamaBaru(e.target.value)} placeholder="Nama siswa baru" onKeyDown={e => e.key === 'Enter' && tambahSiswa()} />
-                <button disabled={loadingSiswa} onClick={tambahSiswa} className="btn-icon">
-                  {loadingSiswa ? <span className="spinner" /> : <Icon name="plus" size={15} />} Tambah Siswa
-                </button>
-
-                <hr className="field-divider" />
-
-                <label>Siswa Dipilih untuk Dihapus</label>
-                <select value={siswaHapus} onChange={e => setSiswaHapus(e.target.value)}>
-                  {siswaHapusList.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <button disabled={loadingSiswa} className="ghost-danger btn-icon" style={{ width: '100%' }} onClick={hapusSiswa}>
-                  {loadingSiswa ? <span className="spinner" /> : <Icon name="trash" size={14} />} Hapus Siswa Ini
-                </button>
-
-                {statusSiswa && <div className={`status ${statusSiswa.sukses ? 'sukses' : 'gagal'}`}>{statusSiswa.pesan}</div>}
-              </div>
-
-              <div className="panel">
-                <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Daftar Siswa — {kelasSiswa}</div>
-                <div className="panel-desc">{siswaHapusList.length} siswa terdaftar — klik untuk pilih target hapus</div>
-
-                <div className="search-box" style={{ marginBottom: 12 }}>
-                  <span className="search-ic"><Icon name="search" size={15} /></span>
-                  <input value={cariSiswaKelola} onChange={e => setCariSiswaKelola(e.target.value)} placeholder="cari nama siswa..." />
-                </div>
-
-                <div className="siswa-list">
-                  {siswaHapusList.length === 0 && <div className="empty-state">Belum ada siswa di kelas ini</div>}
-                  {siswaHapusList.filter(s => s.toLowerCase().includes(cariSiswaKelola.toLowerCase())).map(s => (
-                    <div key={s} className={`siswa-list-row ${s === siswaHapus ? 'selected' : ''}`} onClick={() => setSiswaHapus(s)}>
-                      <div className="avatar-sm">{initials(s)}</div>
-                      <div className="nm">{s}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="panel" style={{ gridColumn: '1 / -1' }}>
-                <div className="panel-title"><span className="ic-badge"><Icon name="plus" size={14} /></span> Tambah Jenis Pembayaran Baru</div>
-                <div className="panel-desc">Otomatis nambah kolom baru di semua sheet kelas — misal "SERAGAM" atau "STUDY TOUR 2"</div>
-
-                <div className="form-grid">
-                  <div>
-                    <label>Nama Item</label>
-                    <input value={namaItemBaru} onChange={e => setNamaItemBaru(e.target.value)} placeholder="contoh: SERAGAM" />
-                  </div>
-                  <div>
-                    <label>Target Harga</label>
-                    <input type="text" inputMode="numeric" value={targetItemBaru} onChange={e => setTargetItemBaru(formatRibuan(e.target.value))} placeholder="contoh: 200.000" />
-                  </div>
-                  <div>
-                    <label>Icon</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {ITEM_ICONS.map(ic => (
-                        <button
-                          key={ic} type="button"
-                          onClick={() => setIconItemBaru(ic)}
-                          className={iconItemBaru === ic ? 'icon-pick selected' : 'icon-pick'}
-                          title={ic}
-                        >
-                          <Icon name={ic} size={16} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label>Kategori</label>
-                    <select value={kategoriItemBaru} onChange={e => setKategoriItemBaru(e.target.value)}>
-                      {ITEM_KATEGORI.map(k => <option key={k} value={k}>{k}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  <label>Kelas (kosongkan = semua kelas)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 6 }}>
-                    {kelasList.map(k => (
-                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
-                        <input
-                          type="checkbox"
-                          checked={kelasItemBaru.includes(k)}
-                          onChange={e => setKelasItemBaru(prev => e.target.checked ? [...prev, k] : prev.filter(x => x !== k))}
-                        />
-                        {k}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <button disabled={loadingItem} onClick={tambahItem} className="btn-icon" style={{ maxWidth: 260 }}>
-                  {loadingItem ? <span className="spinner" /> : <Icon name="plus" size={15} />} Tambah Jenis Pembayaran
-                </button>
-                {statusItem && <div className={`status ${statusItem.sukses ? 'sukses' : 'gagal'}`}>{statusItem.pesan}</div>}
-
-                <div className="subsection-title">Jenis Pembayaran Aktif ({itemList.length})</div>
-                {ITEM_KATEGORI.filter(kat => itemList.some(i => (i.kategori || 'Lainnya') === kat)).map(kat => (
-                  <div key={kat} style={{ marginBottom: 14 }}>
-                    <div className="kategori-label">{kat}</div>
-                    <div className="item-manage-list">
-                      {itemList.filter(i => (i.kategori || 'Lainnya') === kat).map(i => {
-                        const idxFlat = itemList.findIndex(x => x.nama === i.nama);
-                        return (
-                          <div key={i.kolom} className="item-manage-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', width: '100%', gap: 8 }}>
-                              <div className="reorder-btns">
-                                <button type="button" className="reorder-btn" disabled={loadingUrutan || idxFlat === 0} onClick={() => pindahUrutanItem(i.nama, -1)} title="Naikkan urutan">
-                                  <Icon name="up" size={11} />
-                                </button>
-                                <button type="button" className="reorder-btn" disabled={loadingUrutan || idxFlat === itemList.length - 1} onClick={() => pindahUrutanItem(i.nama, 1)} title="Turunkan urutan">
-                                  <Icon name="down" size={11} />
-                                </button>
-                              </div>
-                              <span className="ic-badge" style={{ width: 26, height: 26 }}><Icon name={i.icon || 'receipt'} size={13} /></span>
-                              <span className="nm" style={{ flex: 1 }}>{i.nama}</span>
-                              {editItemNama === i.nama ? (
-                                <>
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={editItemTargetVal}
-                                    onChange={e => setEditItemTargetVal(formatRibuan(e.target.value))}
-                                    placeholder="Target harga"
-                                    style={{ width: 130 }}
-                                  />
-                                  <button className="btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => simpanTargetItem(i.nama)}>
-                                    <Icon name="check" size={12} />
-                                  </button>
-                                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => setEditItemNama(null)}>
-                                    <Icon name="minus" size={12} />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <select
-                                    value={i.kategori || 'Lainnya'}
-                                    style={{ width: 'auto', margin: 0, fontSize: 12.5, padding: '4px 6px' }}
-                                    onChange={e => ubahItemMeta(i.nama, { kategori: e.target.value })}
-                                  >
-                                    {ITEM_KATEGORI.map(k => <option key={k} value={k}>{k}</option>)}
-                                  </select>
-                                  <span className="target">{i.target ? rp(i.target) : 'tanpa target'}</span>
-                                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => { setEditItemNama(i.nama); setEditItemTargetVal(i.target ? formatRibuan(String(i.target)) : ''); }}>
-                                    <Icon name="edit" size={12} />
-                                  </button>
-                                  <button className="ghost-danger btn-icon" style={{ width: 'auto', padding: '5px 10px' }} disabled={loadingItem} onClick={() => hapusItem(i.nama)}>
-                                    <Icon name="trash" size={12} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                            {i.nama === 'PPDB' && (
-                              <div className="hint-text" style={{ padding: '4px 0 2px 40px' }}>
-                                Gel.1 L: Rp 940.000 &nbsp;·&nbsp; Gel.2 L: Rp 1.550.000 &nbsp;·&nbsp; Gel.3 L: Rp 1.175.000 &nbsp;·&nbsp;
-                                Gel.1 P: Rp 1.035.000 &nbsp;·&nbsp; Gel.2 P: Rp 1.165.000 &nbsp;·&nbsp; Gel.3 P: Rp 1.295.000
-                              </div>
-                            )}
-                            {i.nama === 'BUKU' && (
-                              <div className="hint-text" style={{ padding: '4px 0 2px 40px' }}>
-                                BUKU 1 (Kelas 1-2): Rp 400.000 &nbsp;·&nbsp; BUKU 2 (Kelas 3-4): Rp 480.000 &nbsp;·&nbsp; BUKU 3 (Kelas 5-6): Rp 475.000
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {role === 'admin' && (
-                <div className="panel" style={{ gridColumn: '1 / -1' }}>
-                  <div className="panel-title"><span className="ic-badge"><Icon name="up" size={14} /></span> Kenaikan Kelas Tahunan</div>
-                  <div className="panel-desc">
-                    Sekali klik pindahin SEMUA siswa: KELAS 1→2→3→4→5→6→ALUMNI. Data pembayaran (termasuk tunggakan) ikut pindah, gak dihapus.
-                    KELAS 1 jadi kosong, siap diisi siswa baru.
-                  </div>
-                  <button className="ghost-danger btn-icon" style={{ maxWidth: 300 }} disabled={loadingKenaikan} onClick={kenaikanKelas}>
-                    {loadingKenaikan ? <span className="spinner" /> : <Icon name="up" size={15} />} Jalankan Kenaikan Kelas
-                  </button>
-                  {statusKenaikan && (
-                    <div className={`status ${statusKenaikan.sukses ? 'sukses' : 'gagal'}`}>
-                      {statusKenaikan.pesan}
-                      {statusKenaikan.ringkasan?.map((r, i) => <div key={i} style={{ fontSize: 12, marginTop: 4 }}>{r}</div>)}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab === 'kas' && (
-            <div className="bayar-grid">
-              <div className="panel">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : 'Kas Hari Ini'}</div>
-                    <div className="panel-desc">{kas ? kas.tanggal : '—'}</div>
-                  </div>
-                  <div className="toolbar">
-                    <input
-                      type="date"
-                      value={tanggalKas && tanggalKas !== 'semua' ? ddmmyyyyToIso(tanggalKas) : ''}
-                      onChange={e => setTanggalKas(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
-                    />
-                    <button className={`secondary action-btn btn-icon ${tanggalKas === 'semua' ? 'active-toggle' : ''}`} onClick={() => setTanggalKas(tanggalKas === 'semua' ? '' : 'semua')}>
-                      <Icon name="list" size={14} /> {tanggalKas === 'semua' ? 'Kembali ke Hari Ini' : 'Lihat Semua'}
-                    </button>
-                    <button className="secondary action-btn btn-icon" onClick={loadKas}><Icon name="refresh" size={14} /> Refresh</button>
-                  </div>
-                </div>
-
-                {loadingKas && <div className="empty-state"><span className="spinner" />Memuat...</div>}
-                {!loadingKas && kas && (
-                  <>
-                    <div className="stat-grid" style={{ marginBottom: 20 }}>
-                      <div className="stat-tile">
-                        <div className="icon-badge green"><Icon name="down" size={20} /></div>
-                        <div><div className="label">Uang Masuk</div><div className="value value-money">{rp(kas.masuk)}</div></div>
-                      </div>
-                      <div className="stat-tile">
-                        <div className="icon-badge rose"><Icon name="up" size={20} /></div>
-                        <div><div className="label">Uang Keluar</div><div className="value value-money">{rp(kas.keluar)}</div></div>
-                      </div>
-                      <div className="stat-tile">
-                        <div className="icon-badge blue"><Icon name="case" size={20} /></div>
-                        <div><div className="label">Saldo Hari Ini</div><div className="value value-money">{rpSigned(kas.saldo)}</div></div>
-                      </div>
-                    </div>
-
-                    <div className="subsection-title">Rekap Setoran per Item</div>
-                    <div className="table-wrap" style={{ marginBottom: 20 }}>
-                      <table>
-                        <thead><tr><th>Item</th><th className="num">Jumlah Orang</th><th className="num">Total Rp</th></tr></thead>
-                        <tbody>
-                          {kas.rekapPerItem.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada setoran hari ini</td></tr>}
-                          {kas.rekapPerItem.map((r, i) => (
-                            <tr key={i}><td>{r.item}</td><td className="num">{r.orang}</td><td className="num">{rp(r.total)}</td></tr>
-                          ))}
-                        </tbody>
-                        {kas.rekapPerItem.length > 0 && (
-                          <tfoot>
-                            <tr>
-                              <td style={{ fontWeight: 700 }}>Total</td>
-                              <td className="num" style={{ fontWeight: 700 }}>{kas.rekapPerItem.reduce((s, r) => s + r.orang, 0)}</td>
-                              <td className="num" style={{ fontWeight: 700 }}>{rp(kas.masuk)}</td>
-                            </tr>
-                          </tfoot>
-                        )}
-                      </table>
-                    </div>
-
-                    <details className="collapsible" style={{ marginBottom: 12 }}>
-                      <summary>Detail Transaksi Masuk ({kas.transaksiMasuk.length})</summary>
-                      <div className="table-wrap">
-                        <table>
-                          <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Jam</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
-                          <tbody>
-                            {kas.transaksiMasuk.length === 0 && <tr><td colSpan={kas.semua ? 5 : 4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada setoran</td></tr>}
-                            {kas.transaksiMasuk.map((t, i) => (
-                              <tr key={i}>{kas.semua && <td>{t.tanggal}</td>}<td>{t.jam}</td><td>{t.siswa} <span style={{ color: 'var(--muted)' }}>({t.kelas})</span></td><td>{t.item}</td><td className="num">{rp(t.nominal)}</td></tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
-
-                    <details className="collapsible">
-                      <summary>Detail Pengeluaran ({kas.transaksiKeluar.length})</summary>
-                      <div className="table-wrap">
-                        <table>
-                          <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Keterangan</th><th>Dicatat</th><th className="num">Rp</th></tr></thead>
-                          <tbody>
-                            {kas.transaksiKeluar.length === 0 && <tr><td colSpan={kas.semua ? 4 : 3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada pengeluaran</td></tr>}
-                            {kas.transaksiKeluar.map((t, i) => (
-                              <tr key={i}>{kas.semua && <td>{t.tanggal}</td>}<td>{t.keterangan}</td><td>{t.user}</td><td className="num">{rp(t.nominal)}</td></tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
-                  </>
-                )}
-              </div>
-
-              {role === 'admin' && (
-                <div className="panel">
-                  <div className="panel-title"><span className="ic-badge"><Icon name="minus" size={14} /></span> Catat Pengeluaran</div>
-                  <div className="panel-desc">Tercatat otomatis tanggal hari ini</div>
-
-                  <label>Keterangan</label>
-                  <input value={ketPengeluaran} onChange={e => setKetPengeluaran(e.target.value)} placeholder="contoh: Beli ATK kantor" />
-
-                  <label>Nominal</label>
-                  <input type="text" inputMode="numeric" value={nominalPengeluaran} onChange={e => setNominalPengeluaran(formatRibuan(e.target.value))} placeholder="contoh: 150.000" />
-
-                  <button disabled={loadingPengeluaran} className="danger btn-icon" onClick={tambahPengeluaran}>
-                    {loadingPengeluaran ? <span className="spinner" /> : <Icon name="minus" size={15} />} Catat Pengeluaran
-                  </button>
-                  {statusKas && <div className={`status ${statusKas.sukses ? 'sukses' : 'gagal'}`}>{statusKas.pesan}</div>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {tab === 'log' && role === 'admin' && (
-            <div className="panel">
-              <div className="panel-header">
-                <div>
-                  <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Log Aktivitas</div>
-                  <div className="panel-desc">{logData ? logData.tanggal : '—'}{logData?.total ? ` — ${logData.total} kejadian` : ''}</div>
-                </div>
-                <div className="toolbar">
-                  <input
-                    type="date"
-                    value={tanggalLog && tanggalLog !== 'semua' ? ddmmyyyyToIso(tanggalLog) : ''}
-                    onChange={e => setTanggalLog(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
-                  />
-                  <button className={`secondary action-btn btn-icon ${tanggalLog === 'semua' ? 'active-toggle' : ''}`} onClick={() => setTanggalLog(tanggalLog === 'semua' ? '' : 'semua')}>
-                    <Icon name="list" size={14} /> {tanggalLog === 'semua' ? 'Kembali ke Hari Ini' : 'Lihat Semua'}
-                  </button>
-                  <button className="secondary action-btn btn-icon" onClick={loadLog}><Icon name="refresh" size={14} /> Refresh</button>
-                </div>
-              </div>
-
-              {loadingLog && <div className="empty-state"><span className="spinner" />Memuat...</div>}
-              {!loadingLog && logData && (
-                <>
-                  {logData.dipotong && <div className="status gagal" style={{ marginBottom: 14 }}>Cuma nampilin 200 kejadian terbaru dari {logData.total} total — persempit tanggal buat lihat lebih detail.</div>}
-                  <div className="table-wrap">
-                    <table>
-                      <thead><tr><th>Jam</th><th>Aksi</th><th>User</th><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Lama → Baru</th><th>Metode</th></tr></thead>
-                      <tbody>
-                        {logData.entries.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada aktivitas</td></tr>}
-                        {logData.entries.map((e, i) => {
-                          const meta = AKSI_LABEL[e.aksi] || { label: e.aksi, color: 'belum' };
-                          const [tgl, jam] = e.waktu.split(' ');
-                          return (
-                            <tr key={i}>
-                              <td>{jam}{logData.semua && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tgl}</div>}</td>
-                              <td><span className={`status-chip ${meta.color}`} style={{ fontSize: 10.5 }}>{meta.label}</span></td>
-                              <td>{e.user}</td>
-                              <td>{e.kelas}</td>
-                              <td>{e.siswa}</td>
-                              <td>{e.item}</td>
-                              <td className="num">{e.lama || e.baru ? `${e.lama ? rp(e.lama) : '-'} → ${e.baru ? rp(e.baru) : '-'}` : '-'}</td>
-                              <td>{e.metode || '-'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {tab === 'rekap' && (
-            <>
-              <div className="panel">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title"><span className="ic-badge"><Icon name="chart" size={14} /></span> % Lunas per Kelas</div>
-                    <div className="panel-desc">Persentase siswa yang sudah membayar semua item</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <select className="no-print" style={{ width: 'auto', margin: 0 }} value={rekapKelasFilter} onChange={e => setRekapKelasFilter(e.target.value)}>
-                      <option value="">Semua Kelas</option>
-                      {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-                    </select>
-                    <button className="secondary action-btn btn-icon no-print" onClick={loadRekap}><Icon name="refresh" size={14} /> Refresh</button>
-                  </div>
-                </div>
-                {rekap?.perKelas.map(k => (
-                  <div className="bar-row" key={k.kelas}>
-                    <div className="name" title={k.kelas}>{k.kelas}</div>
-                    <BarFill pct={k.persenLunas} />
-                    <div className="pct">{k.persenLunas}%</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="panel">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Data Siswa per Kelas</div>
-                    <div className="panel-desc">Status pembayaran tiap siswa, per item</div>
-                  </div>
-                  <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
-                    {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                </div>
-
-                <div className="search-box no-print" style={{ marginBottom: 12, maxWidth: 320 }}>
-                  <span className="search-ic"><Icon name="search" size={15} /></span>
-                  <input value={cariSiswaDetail} onChange={e => setCariSiswaDetail(e.target.value)} placeholder="cari nama siswa..." />
-                </div>
-
-                {loadingDetail && <div className="empty-state"><span className="spinner" />Memuat...</div>}
-                {!loadingDetail && kelasDetail && (
-                  <div className="table-wrap">
-                    <table className="matrix-table">
-                      <thead>
-                        <tr>
-                          <th>Nama Siswa</th>
-                          {kelasDetail.items.map(it => <th key={it.kolom}>{it.nama}</th>)}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).length === 0 && (
-                          <tr><td colSpan={kelasDetail.items.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
-                        )}
-                        {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).map(s => (
-                          <tr key={s.nama}>
-                            <td>{s.nama}</td>
-                            {kelasDetail.items.map(it => {
-                              const val = Number(s.values[it.kolom]) || 0;
-                              const ket = s.keterangan?.[it.kolom];
-                              const target = targetSebenarnya(it.nama, ket, it.target);
-                              const status = hitungStatus(val, target);
-                              const sisa = target ? target - val : null;
-                              const ketSuffix = ket ? ` (${ket})` : '';
-                              const tooltip = status === 'lunas'
-                                ? `Lunas${ketSuffix} — ${rp(val)}`
-                                : status === 'cicil'
-                                ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
-                                : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
-                              return (
-                                <td key={it.kolom} title={tooltip}>
-                                  <span className={`status-chip ${status}`}>
-                                    {status === 'lunas' ? '✓' : status === 'cicil' ? rpSingkat(val) : '—'}
-                                  </span>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div className="two-col-panels">
-                <div className="panel">
-                  <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Rekap per Item</div>
-                  <div className="panel-desc">Jumlah siswa terisi & total nominal per jenis pembayaran (PPDB/BUKU dipecah per gelombang & kelas)</div>
-                  <div className="table-wrap">
-                    <table><thead><tr><th>Item</th><th className="num">Terisi</th><th className="num">Total Rp</th></tr></thead>
-                      <tbody>
-                        {rekap?.perItem.map(i => (
-                          <Fragment key={i.kolom}>
-                            <tr>
-                              <td>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                  <Icon name={i.nama === 'PPDB' ? 'layers' : i.nama === 'BUKU' ? 'book' : 'receipt'} size={13} />
-                                  {i.nama}
-                                </span>
-                              </td>
-                              <td className="num">{i.terisi}</td>
-                              <td className="num">{rp(i.nominal)}</td>
-                            </tr>
-                            {i.varian && i.varian.length > 0 && (
-                              <tr className="no-print">
-                                <td colSpan={3} style={{ paddingTop: 0, paddingBottom: 8 }}>
-                                  <select
-                                    style={{ width: 'auto', margin: '0 0 6px', fontSize: 12.5, padding: '4px 8px' }}
-                                    value={varianFilter[i.kolom] || ''}
-                                    onChange={e => setVarianFilter(v => ({ ...v, [i.kolom]: e.target.value }))}
-                                  >
-                                    <option value="">Semua varian {i.nama}</option>
-                                    {i.varian.map(v => <option key={v.label} value={v.label}>{v.label}</option>)}
-                                  </select>
-                                  {i.varian.filter(v => !varianFilter[i.kolom] || v.label === varianFilter[i.kolom]).map(v => (
-                                    <div key={v.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--muted)', padding: '3px 4px 3px 20px' }}>
-                                      <span><Icon name="filter" size={11} /> {v.label}</span>
-                                      <span>{v.terisi} siswa — {rp(v.nominal)}</span>
-                                    </div>
-                                  ))}
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="panel">
-                  <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Bayar Hari Ini</div>
-                  <div className="panel-desc">Transaksi yang masuk hari ini</div>
-                  <div className="table-wrap">
-                    <table><thead><tr><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
-                      <tbody>
-                        {rekap && rekap.bayarHariIni.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi hari ini</td></tr>}
-                        {rekap?.bayarHariIni.map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </motion.div>
+          <motion.div className="main-content" key={tab} {...fadeSlide}>
+            {tab === 'bayar' && <BayarTab p={p} />}
+            {tab === 'siswa' && role === 'admin' && <SiswaTab p={p} />}
+            {tab === 'kas' && <KasTab p={p} />}
+            {tab === 'log' && role === 'admin' && <LogTab p={p} />}
+            {tab === 'rekap' && <RekapTab p={p} />}
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      {confirmDialog && (
-        <div className="confirm-backdrop" onClick={() => setConfirmDialog(null)}>
-          <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
-            <div className="confirm-icon"><Icon name="trash" size={22} /></div>
-            <h3>{confirmDialog.title}</h3>
-            <p>{confirmDialog.message}</p>
-            <div className="confirm-actions">
-              <button className="secondary" onClick={() => setConfirmDialog(null)}>Batal</button>
-              <button className="danger" onClick={confirmDialog.onConfirm}>Ya, Hapus</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog confirmDialog={confirmDialog} setConfirmDialog={setConfirmDialog} />
     </div>
   );
 }

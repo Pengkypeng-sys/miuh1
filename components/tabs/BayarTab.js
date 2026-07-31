@@ -1,0 +1,306 @@
+'use client';
+import { motion } from 'motion/react';
+import { Icon } from '@/lib/icons';
+import { hitungStatus } from '@/lib/target';
+import { BarFill } from '@/components/BarFill';
+import {
+  rp, rpSigned, formatRibuan, targetSebenarnya,
+  BULAN_LIST, BUKU_KELAS_MAP, PPDB_HARGA_ACUAN, BUKU_HARGA_ACUAN,
+} from '@/lib/format';
+
+export function BayarTab({ p }) {
+  const {
+    kelas, setKelas, kelasList, siswa, setSiswa, siswaList,
+    ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
+    bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
+    sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
+    itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar,
+    itemValues, loadingRingkasan, kolom, setKolom,
+    showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
+  } = p;
+
+  return (
+    <div className="bayar-grid">
+      <div className="panel">
+        <div className="panel-title"><span className="ic-badge"><Icon name="edit" size={14} /></span> Input Pembayaran</div>
+        <div className="panel-desc">Centang item yang dibayar (bisa lebih dari 1), isi nominalnya, pilih metode</div>
+
+        <label>Pilih Kelas</label>
+        <select value={kelas} onChange={e => setKelas(e.target.value)}>
+          {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+
+        <label>Nama Siswa</label>
+        <div className="search-box">
+          <span className="search-ic"><Icon name="search" size={15} /></span>
+          <input
+            list="daftar-siswa-bayar"
+            value={siswa}
+            onChange={e => setSiswa(e.target.value)}
+            placeholder="ketik nama siswa..."
+          />
+        </div>
+        <datalist id="daftar-siswa-bayar">
+          {siswaList.map(s => <option key={s} value={s} />)}
+        </datalist>
+
+        <hr className="field-divider" />
+
+        <label>Item yang Dibayar <span style={{ fontWeight: 'normal', color: 'var(--muted)' }}>(nominal &lt;1000 otomatis dikali 1000)</span></label>
+        <div className="checkout-list">
+          <div className="checkout-row">
+            <label className="checkout-check">
+              <input type="checkbox" checked={ppdbOn} onChange={e => { setPpdbOn(e.target.checked); if (!e.target.checked) { setPpdbGel(''); setPpdbGender(''); setPpdbNominal(''); } }} />
+              <span className="nm">PPDB</span>
+            </label>
+            {ppdbOn && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                <select value={ppdbGel} onChange={e => setPpdbGel(e.target.value)}>
+                  <option value="">Pilih Gelombang</option>
+                  <option value="1">Gel.1</option>
+                  <option value="2">Gel.2</option>
+                  <option value="3">Gel.3</option>
+                </select>
+                <select value={ppdbGender} onChange={e => setPpdbGender(e.target.value)}>
+                  <option value="">Pilih Jenis Kelamin</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+                {ppdbGel && ppdbGender && (
+                  <>
+                    <input
+                      type="text" inputMode="numeric" className="checkout-nominal"
+                      placeholder="nominal PPDB"
+                      value={ppdbNominal}
+                      onChange={e => setPpdbNominal(formatRibuan(e.target.value))}
+                    />
+                    <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {PPDB_HARGA_ACUAN[`${ppdbGel}-${ppdbGender}`].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="checkout-row">
+            <label className="checkout-check">
+              <input type="checkbox" checked={bukuOn} onChange={e => { setBukuOn(e.target.checked); if (!e.target.checked) { setBukuKelasPilih(''); setBukuNominal(''); } }} />
+              <span className="nm">BUKU</span>
+            </label>
+            {bukuOn && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
+                  {Object.keys(BUKU_KELAS_MAP).map(k => (
+                    <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
+                      <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
+                      {k}
+                    </label>
+                  ))}
+                </div>
+                {bukuKelasPilih && (
+                  <>
+                    <input
+                      type="text" inputMode="numeric" className="checkout-nominal"
+                      placeholder={`nominal ${BUKU_KELAS_MAP[bukuKelasPilih]}`}
+                      value={bukuNominal}
+                      onChange={e => setBukuNominal(formatRibuan(e.target.value))}
+                    />
+                    <div className="hint-text" style={{ width: '100%' }}>Harga acuan: Rp {BUKU_HARGA_ACUAN[bukuKelasPilih].toLocaleString('id-ID')} — bisa diubah kalau beda</div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="checkout-row">
+            <label className="checkout-check">
+              <input type="checkbox" checked={sppOn} onChange={e => { setSppOn(e.target.checked); if (!e.target.checked) { setSppBulan([]); setSppNominal(''); setTabunganOn(false); setTabunganNominal(''); } }} />
+              <span className="nm">SPP</span>
+            </label>
+            {sppOn && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
+                  {BULAN_LIST.map(b => (
+                    <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400 }}>
+                      <input
+                        type="checkbox"
+                        checked={sppBulan.includes(b)}
+                        onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
+                      />
+                      {b}
+                    </label>
+                  ))}
+                </div>
+                <input
+                  type="text" inputMode="numeric" className="checkout-nominal"
+                  placeholder="nominal SPP"
+                  value={sppNominal}
+                  onChange={e => setSppNominal(formatRibuan(e.target.value))}
+                />
+                <label className="mode-toggle" style={{ width: '100%' }}>
+                  <input type="checkbox" checked={tabunganOn} onChange={e => { setTabunganOn(e.target.checked); if (!e.target.checked) setTabunganNominal(''); }} />
+                  Sertakan Tabungan Wajib
+                </label>
+                {tabunganOn && (
+                  <input
+                    type="text" inputMode="numeric" className="checkout-nominal"
+                    placeholder="nominal Tabungan Wajib"
+                    value={tabunganNominal}
+                    onChange={e => setTabunganNominal(formatRibuan(e.target.value))}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {itemList.filter(i => i.nama !== 'PPDB' && i.nama !== 'BUKU' && i.nama !== 'SPP').map(i => {
+            const checked = checkedItems.has(i.kolom);
+            const val = Number(itemValues[i.kolom]) || 0;
+            const status = hitungStatus(val, i.target);
+            return (
+              <div key={i.kolom} className={`checkout-row ${checked ? 'checked' : ''}`}>
+                <label className="checkout-check">
+                  <input type="checkbox" checked={checked} onChange={() => toggleCheckedItem(i.kolom)} />
+                  <Icon name={i.icon || 'receipt'} size={13} />
+                  <span className="nm">{i.nama}</span>
+                  <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓' : status === 'cicil' ? 'nyicil' : 'belum'}</span>
+                </label>
+                {checked && (
+                  <>
+                    <input
+                      type="text" inputMode="numeric" className="checkout-nominal"
+                      placeholder={modePerItem[i.kolom] === 'set' ? 'nilai total yang benar' : 'nominal setoran'}
+                      value={nominalPerItem[i.kolom] || ''}
+                      onChange={e => setNominalPerItem(prev => ({ ...prev, [i.kolom]: formatRibuan(e.target.value) }))}
+                    />
+                    {role === 'admin' && (
+                      <label className="mode-toggle">
+                        <input
+                          type="checkbox"
+                          checked={modePerItem[i.kolom] === 'set'}
+                          onChange={e => setModePerItem(prev => ({ ...prev, [i.kolom]: e.target.checked ? 'set' : 'tambah' }))}
+                        />
+                        Timpa nilai langsung (koreksi salah input, bukan nambah)
+                      </label>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <label>Metode Pembayaran</label>
+        <select value={metodeBayar} onChange={e => setMetodeBayar(e.target.value)}>
+          <option value="Cash">💵 Cash</option>
+          <option value="Transfer">🏦 Transfer</option>
+          <option value="QRIS">📱 QRIS</option>
+        </select>
+
+        <button disabled={loadingBtn} onClick={submitData} className="btn-icon">
+          {loadingBtn ? <span className="spinner" /> : <Icon name="save" size={16} />} Simpan {checkedItems.size > 0 ? `(${checkedItems.size} item)` : ''}
+        </button>
+        {statusBayar && <div className={`status ${statusBayar.sukses ? 'sukses' : 'gagal'}`}>{statusBayar.pesan}</div>}
+      </div>
+
+      <div className="panel">
+        <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Ringkasan Pembayaran Siswa</div>
+        <div className="panel-desc">Status semua item untuk siswa yang dipilih</div>
+
+        {siswa && (
+          <div className="siswa-card">
+            <div className="avatar">{siswa.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
+            <div>
+              <div className="nm">{siswa}</div>
+              <div className="kl">{kelas}</div>
+            </div>
+          </div>
+        )}
+
+        {loadingRingkasan && (
+          <div className="item-status-list">
+            {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
+          </div>
+        )}
+        {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
+          {itemList.map(i => {
+            const val = Number(itemValues[i.kolom]) || 0;
+            const ket = itemValues.__keterangan?.[i.kolom];
+            const target = targetSebenarnya(i.nama, ket, i.target);
+            const status = hitungStatus(val, target);
+            const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
+            const sisa = target ? val - target : null;
+            return (
+              <motion.div
+                key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}
+                variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+                whileTap={{ scale: 0.985 }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="nm" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
+                    <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
+                      {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
+                    </span>
+                  </div>
+                  {status === 'cicil' && (
+                    <>
+                      <div style={{ marginTop: 6, height: 6 }}>
+                        <BarFill pct={pct} color="var(--gold)" />
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
+                        Sisa {rpSigned(sisa)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>}
+
+        {role === 'admin' && siswa && kolom && Number(itemValues[kolom]) > 0 && (
+          <div className="fix-actions">
+            <button className="secondary btn-icon" style={{ width: 'auto' }} onClick={() => setShowPindah(v => !v)}>
+              <Icon name="refresh" size={13} /> Salah pilih item? Pindahkan
+            </button>
+
+            {showPindah && (
+              <div className="pindah-box">
+                <div className="hint-text" style={{ marginTop: 0, marginBottom: 8 }}>
+                  Pindahkan dari "<b>{itemList.find(i => String(i.kolom) === String(kolom))?.nama}</b>" ke item lain
+                </div>
+                <select value={pindahKeKolom} onChange={e => setPindahKeKolom(e.target.value)}>
+                  <option value="">Pilih item tujuan...</option>
+                  {itemList.filter(i => String(i.kolom) !== String(kolom)).map(i => (
+                    <option key={i.kolom} value={i.kolom}>{i.nama}</option>
+                  ))}
+                </select>
+                <input
+                  type="text" inputMode="numeric"
+                  placeholder={`nominal (kosongin = pindah semua Rp ${rp(itemValues[kolom])})`}
+                  value={pindahNominal}
+                  onChange={e => setPindahNominal(formatRibuan(e.target.value))}
+                />
+                <button disabled={loadingPindah} onClick={pindahPembayaran} className="btn-icon">
+                  {loadingPindah ? <span className="spinner" /> : <Icon name="refresh" size={14} />} Pindahkan Sekarang
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {role === 'admin' && siswa && kolom && (
+          <button
+            className="ghost-danger btn-icon"
+            style={{ marginTop: 10 }}
+            disabled={loadingBtn}
+            onClick={hapusData}
+          >
+            <Icon name="trash" size={13} /> Hapus data "{itemList.find(i => String(i.kolom) === String(kolom))?.nama}" milik {siswa}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
