@@ -273,15 +273,16 @@ export default function Home() {
 
   useEffect(() => { if (tab === 'rekap') loadRekap(); }, [rekapKelasFilter]);
 
-  // auto-refresh tab yang lagi aktif tiap 15 detik, biar data selalu up-to-date tanpa klik Refresh manual
+  // auto-refresh tab yang lagi aktif tiap 15 detik, biar data selalu up-to-date tanpa klik Refresh manual.
+  // "Data Siswa per Kelas" gak ikut auto-refresh — bikin loading/reset pas lagi dibaca/dicari, ganggu.
   useEffect(() => {
     const interval = setInterval(() => {
-      if (tab === 'rekap') { loadRekap(); if (kelasDetailPilih) loadKelasDetail(); }
+      if (tab === 'rekap') loadRekap();
       else if (tab === 'kas') loadKas();
       else if (tab === 'log') loadLog();
     }, 15000);
     return () => clearInterval(interval);
-  }, [tab, kelasDetailPilih, tanggalKas, tanggalLog, rekapKelasFilter]);
+  }, [tab, tanggalKas, tanggalLog, rekapKelasFilter]);
 
   useEffect(() => {
     if (tab !== 'rekap' || !kelasDetailPilih) return;
