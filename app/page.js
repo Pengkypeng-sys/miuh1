@@ -658,7 +658,13 @@ export default function Home() {
 
                   <div className="checkout-row">
                     <label className="checkout-check">
-                      <input type="checkbox" checked={bukuOn} onChange={e => { setBukuOn(e.target.checked); if (!e.target.checked) { setBukuKelasPilih(''); setBukuNominal(''); } }} />
+                      <input type="checkbox" checked={bukuOn} onChange={e => {
+                        setBukuOn(e.target.checked);
+                        if (e.target.checked) {
+                          setBukuKelasPilih(kelas);
+                          setBukuNominal(formatRibuan(String(BUKU_HARGA_ACUAN[kelas] || '')));
+                        } else { setBukuKelasPilih(''); setBukuNominal(''); }
+                      }} />
                       <span className="nm">BUKU</span>
                     </label>
                     {bukuOn && (
