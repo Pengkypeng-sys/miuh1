@@ -673,21 +673,13 @@ export default function Home() {
                     </label>
                     {ppdbOn && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
-                        <select value={ppdbGel} onChange={e => {
-                          setPpdbGel(e.target.value);
-                          const acuan = PPDB_HARGA_ACUAN[`${e.target.value}-${ppdbGender}`];
-                          if (acuan) setPpdbNominal(formatRibuan(String(acuan)));
-                        }}>
+                        <select value={ppdbGel} onChange={e => setPpdbGel(e.target.value)}>
                           <option value="">Pilih Gelombang</option>
                           <option value="1">Gel.1</option>
                           <option value="2">Gel.2</option>
                           <option value="3">Gel.3</option>
                         </select>
-                        <select value={ppdbGender} onChange={e => {
-                          setPpdbGender(e.target.value);
-                          const acuan = PPDB_HARGA_ACUAN[`${ppdbGel}-${e.target.value}`];
-                          if (acuan) setPpdbNominal(formatRibuan(String(acuan)));
-                        }}>
+                        <select value={ppdbGender} onChange={e => setPpdbGender(e.target.value)}>
                           <option value="">Pilih Jenis Kelamin</option>
                           <option value="L">Laki-laki</option>
                           <option value="P">Perempuan</option>
@@ -709,13 +701,7 @@ export default function Home() {
 
                   <div className="checkout-row">
                     <label className="checkout-check">
-                      <input type="checkbox" checked={bukuOn} onChange={e => {
-                        setBukuOn(e.target.checked);
-                        if (e.target.checked) {
-                          setBukuKelasPilih(kelas);
-                          setBukuNominal(formatRibuan(String(BUKU_HARGA_ACUAN[kelas] || '')));
-                        } else { setBukuKelasPilih(''); setBukuNominal(''); }
-                      }} />
+                      <input type="checkbox" checked={bukuOn} onChange={e => { setBukuOn(e.target.checked); if (!e.target.checked) { setBukuKelasPilih(''); setBukuNominal(''); } }} />
                       <span className="nm">BUKU</span>
                     </label>
                     {bukuOn && (
@@ -723,11 +709,7 @@ export default function Home() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
                           {Object.keys(BUKU_KELAS_MAP).map(k => (
                             <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
-                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => {
-                                const next = bukuKelasPilih === k ? '' : k;
-                                setBukuKelasPilih(next);
-                                if (next) setBukuNominal(formatRibuan(String(BUKU_HARGA_ACUAN[next])));
-                              }} />
+                              <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
                               {k}
                             </label>
                           ))}
