@@ -75,6 +75,18 @@ function LoginLogo() {
   return <img ref={ref} src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />;
 }
 
+function LoadingScreen() {
+  return (
+    <div className="login-shell">
+      <motion.div className="loading-box" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+        <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />
+        <span className="spinner" style={{ width: 22, height: 22, marginTop: 14 }} />
+        <div className="loading-txt">Memuat dashboard...</div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -134,6 +146,7 @@ export default function Home() {
   const [statusBayar, setStatusBayar] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
   const [itemValues, setItemValues] = useState({});
+  const [loadingRingkasan, setLoadingRingkasan] = useState(false);
 
   function toggleCheckedItem(kolomItem) {
     setCheckedItems(prev => {
@@ -232,8 +245,10 @@ export default function Home() {
 
   // 1 panggilan API buat ambil semua nilai item siswa sekaligus (bukan 1 per item) — hindari rate limit Sheets API
   async function loadItemValues() {
+    setLoadingRingkasan(true);
     const row = await fetch(`/api/payment/row?kelas=${encodeURIComponent(kelas)}&siswa=${encodeURIComponent(siswa)}`).then(r => r.json());
     setItemValues(row);
+    setLoadingRingkasan(false);
   }
 
   function cekSessionExpired(res) {
@@ -505,7 +520,7 @@ export default function Home() {
     );
   }
 
-  if (checking) return null;
+  if (checking) return <LoadingScreen />;
 
   if (lisensiExpired) {
     return (
@@ -845,7 +860,12 @@ export default function Home() {
                   </div>
                 )}
 
-                <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
+                {loadingRingkasan && (
+                  <div className="item-status-list">
+                    {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
+                  </div>
+                )}
+                {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
                   {itemList.map(i => {
                     const val = Number(itemValues[i.kolom]) || 0;
                     const ket = itemValues.__keterangan?.[i.kolom];
@@ -880,7 +900,7 @@ export default function Home() {
                       </motion.div>
                     );
                   })}
-                </motion.div>
+                </motion.div>}
 
                 {role === 'admin' && siswa && kolom && Number(itemValues[kolom]) > 0 && (
                   <div className="fix-actions">
