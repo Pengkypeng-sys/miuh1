@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getValues, getTargetMap } from '@/lib/sheets';
+import { getValues, getTargetMap, getColumnLabels, colToLetter } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { hitungStatus } from '@/lib/target';
 import { DEMO_MODE, DEMO_SISWA, DEMO_ITEMS } from '@/lib/demoData';
@@ -35,11 +35,20 @@ export async function GET(req) {
     .map((nama, i) => ({ nama, kolom: i + 1, target: targetMap[nama] || 0 }))
     .filter(h => h.kolom >= itemColStartIdx && h.kolom <= itemColEndIdx && h.nama);
 
-  const siswa = rows.slice(1)
-    .filter(r => r[0])
-    .map(r => ({
+  const dataRows = rows.slice(1);
+  const varianItems = items.filter(it => it.nama === 'PPDB' || it.nama === 'BUKU');
+  const labelsByCol = {};
+  for (const it of varianItems) {
+    labelsByCol[it.kolom] = await getColumnLabels(kelas, colToLetter(it.kolom), dataRows.length);
+  }
+
+  const siswa = dataRows
+    .map((r, ri) => ({ r, ri }))
+    .filter(({ r }) => r[0])
+    .map(({ r, ri }) => ({
       nama: r[0],
       values: Object.fromEntries(items.map(it => [it.kolom, r[it.kolom - 1] ?? ''])),
+      keterangan: Object.fromEntries(varianItems.map(it => [it.kolom, labelsByCol[it.kolom][ri] || ''])),
     }))
     .sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
 

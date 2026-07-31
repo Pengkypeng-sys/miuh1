@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { animate as animeAnimate } from 'animejs';
 import { hitungStatus } from '@/lib/target';
@@ -159,6 +159,8 @@ export default function Home() {
   const [cariSiswaDetail, setCariSiswaDetail] = useState('');
 
   const [rekap, setRekap] = useState(null);
+  const [rekapKelasFilter, setRekapKelasFilter] = useState('');
+  const [varianFilter, setVarianFilter] = useState({});
   const [kelasDetailPilih, setKelasDetailPilih] = useState('');
   const [kelasDetail, setKelasDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -262,9 +264,12 @@ export default function Home() {
   }
 
   async function loadRekap() {
-    const data = await fetch('/api/rekap').then(r => r.json());
+    const url = rekapKelasFilter ? `/api/rekap?kelas=${encodeURIComponent(rekapKelasFilter)}` : '/api/rekap';
+    const data = await fetch(url).then(r => r.json());
     setRekap(data);
   }
+
+  useEffect(() => { if (tab === 'rekap') loadRekap(); }, [rekapKelasFilter]);
 
   // auto-refresh tab yang lagi aktif tiap 15 detik, biar data selalu up-to-date tanpa klik Refresh manual
   useEffect(() => {
@@ -274,7 +279,7 @@ export default function Home() {
       else if (tab === 'log') loadLog();
     }, 15000);
     return () => clearInterval(interval);
-  }, [tab, kelasDetailPilih, tanggalKas, tanggalLog]);
+  }, [tab, kelasDetailPilih, tanggalKas, tanggalLog, rekapKelasFilter]);
 
   useEffect(() => {
     if (tab !== 'rekap' || !kelasDetailPilih) return;
@@ -1253,7 +1258,13 @@ export default function Home() {
                     <div className="panel-title"><span className="ic-badge"><Icon name="chart" size={14} /></span> % Lunas per Kelas</div>
                     <div className="panel-desc">Persentase siswa yang sudah membayar semua item</div>
                   </div>
-                  <button className="secondary action-btn btn-icon no-print" onClick={loadRekap}><Icon name="refresh" size={14} /> Refresh</button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select className="no-print" style={{ width: 'auto', margin: 0 }} value={rekapKelasFilter} onChange={e => setRekapKelasFilter(e.target.value)}>
+                      <option value="">Semua Kelas</option>
+                      {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                    <button className="secondary action-btn btn-icon no-print" onClick={loadRekap}><Icon name="refresh" size={14} /> Refresh</button>
+                  </div>
                 </div>
                 {rekap?.perKelas.map(k => (
                   <div className="bar-row" key={k.kelas}>
@@ -1299,13 +1310,16 @@ export default function Home() {
                             <td>{s.nama}</td>
                             {kelasDetail.items.map(it => {
                               const val = Number(s.values[it.kolom]) || 0;
-                              const status = hitungStatus(val, it.target);
-                              const sisa = it.target ? it.target - val : null;
+                              const ket = s.keterangan?.[it.kolom];
+                              const target = targetSebenarnya(it.nama, ket, it.target);
+                              const status = hitungStatus(val, target);
+                              const sisa = target ? target - val : null;
+                              const ketSuffix = ket ? ` (${ket})` : '';
                               const tooltip = status === 'lunas'
-                                ? `Lunas — ${rp(val)}`
+                                ? `Lunas${ketSuffix} — ${rp(val)}`
                                 : status === 'cicil'
-                                ? `Sudah masuk ${rp(val)}${it.target ? `, sisa ${rp(sisa)}` : ''}`
-                                : it.target ? `Belum bayar — target ${rp(it.target)}` : 'Belum bayar';
+                                ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
+                                : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
                               return (
                                 <td key={it.kolom} title={tooltip}>
                                   <span className={`status-chip ${status}`}>
@@ -1325,10 +1339,45 @@ export default function Home() {
               <div className="two-col-panels">
                 <div className="panel">
                   <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Rekap per Item</div>
-                  <div className="panel-desc">Jumlah siswa terisi & total nominal per jenis pembayaran</div>
+                  <div className="panel-desc">Jumlah siswa terisi & total nominal per jenis pembayaran (PPDB/BUKU dipecah per gelombang & kelas)</div>
                   <div className="table-wrap">
                     <table><thead><tr><th>Item</th><th className="num">Terisi</th><th className="num">Total Rp</th></tr></thead>
-                      <tbody>{rekap?.perItem.map(i => <tr key={i.kolom}><td>{i.nama}</td><td className="num">{i.terisi}</td><td className="num">{rp(i.nominal)}</td></tr>)}</tbody>
+                      <tbody>
+                        {rekap?.perItem.map(i => (
+                          <Fragment key={i.kolom}>
+                            <tr>
+                              <td>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                  <Icon name={i.nama === 'PPDB' ? 'layers' : i.nama === 'BUKU' ? 'book' : 'receipt'} size={13} />
+                                  {i.nama}
+                                </span>
+                              </td>
+                              <td className="num">{i.terisi}</td>
+                              <td className="num">{rp(i.nominal)}</td>
+                            </tr>
+                            {i.varian && i.varian.length > 0 && (
+                              <tr className="no-print">
+                                <td colSpan={3} style={{ paddingTop: 0, paddingBottom: 8 }}>
+                                  <select
+                                    style={{ width: 'auto', margin: '0 0 6px', fontSize: 12.5, padding: '4px 8px' }}
+                                    value={varianFilter[i.kolom] || ''}
+                                    onChange={e => setVarianFilter(v => ({ ...v, [i.kolom]: e.target.value }))}
+                                  >
+                                    <option value="">Semua varian {i.nama}</option>
+                                    {i.varian.map(v => <option key={v.label} value={v.label}>{v.label}</option>)}
+                                  </select>
+                                  {i.varian.filter(v => !varianFilter[i.kolom] || v.label === varianFilter[i.kolom]).map(v => (
+                                    <div key={v.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--muted)', padding: '3px 4px 3px 20px' }}>
+                                      <span><Icon name="filter" size={11} /> {v.label}</span>
+                                      <span>{v.terisi} siswa — {rp(v.nominal)}</span>
+                                    </div>
+                                  ))}
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        ))}
+                      </tbody>
                     </table>
                   </div>
                 </div>

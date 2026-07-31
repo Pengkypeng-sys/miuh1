@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
-import { getValues, getSheetTitles, EXCLUDED_SHEETS, getTargetMap } from '@/lib/sheets';
+import { getValues, getSheetTitles, EXCLUDED_SHEETS, getTargetMap, getColumnLabels, colToLetter } from '@/lib/sheets';
 import { getSession } from '@/lib/auth';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
 
 const todayJakarta = () => new Date().toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' }).split('/').join('/');
+const VARIAN_ITEMS = ['PPDB', 'BUKU']; // item yang dipecah per Gel./Kelas Buku waktu ditampilin
 
-export async function GET() {
+export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
 
   if (DEMO_MODE) return NextResponse.json(DEMO_REKAP);
 
+  const kelasFilter = new URL(req.url).searchParams.get('kelas'); // null = semua kelas
   const today = todayJakarta();
-  const titles = (await getSheetTitles()).filter(t => !EXCLUDED_SHEETS.includes(t));
+  const titles = (await getSheetTitles()).filter(t => !EXCLUDED_SHEETS.includes(t) && (!kelasFilter || t === kelasFilter));
   const targetMap = await getTargetMap();
 
   const itemMap = {}; // kolom -> {kolom, nama, terisi, nominal}
@@ -40,7 +42,15 @@ export async function GET() {
     const itemCols = Object.keys(itemMap).map(Number).filter(k => k - 1 >= itemColStartIdx && k - 1 < itemColEndIdx);
     let lunasCount = 0, totalSiswa = 0;
 
-    dataRows.forEach(r => {
+    // Kolom PPDB/BUKU di kelas ini — ambil label varian (Gel./Buku) 1 kali per kolom buat seluruh kelas.
+    const varianCols = itemCols.filter(kolom => VARIAN_ITEMS.includes(header[kolom - 1]));
+    const labelsByCol = {};
+    for (const kolom of varianCols) {
+      labelsByCol[kolom] = await getColumnLabels(kelas, colToLetter(kolom), dataRows.length);
+      if (!itemMap[kolom].varian) itemMap[kolom].varian = {};
+    }
+
+    dataRows.forEach((r, ri) => {
       const nama = r[0];
       if (!nama) return;
       totalSiswa++;
@@ -52,6 +62,13 @@ export async function GET() {
         if (val !== '' && val !== undefined && val !== null) {
           itemMap[kolom].terisi++;
           itemMap[kolom].nominal += Number(val) || 0;
+
+          if (varianCols.includes(kolom)) {
+            const label = labelsByCol[kolom][ri] || 'Tanpa keterangan';
+            if (!itemMap[kolom].varian[label]) itemMap[kolom].varian[label] = { label, terisi: 0, nominal: 0 };
+            itemMap[kolom].varian[label].terisi++;
+            itemMap[kolom].varian[label].nominal += Number(val) || 0;
+          }
         }
         if (status !== 'lunas') semuaLunas = false;
       });
@@ -70,9 +87,10 @@ export async function GET() {
     perKelas.push({ kelas, totalSiswa, lunasCount, persenLunas: totalSiswa > 0 ? Math.round((lunasCount / totalSiswa) * 100) : 0 });
   }
 
-  return NextResponse.json({
-    perItem: Object.values(itemMap).sort((a, b) => a.kolom - b.kolom),
-    perKelas,
-    bayarHariIni,
-  });
+  const perItem = Object.values(itemMap).map(it => ({
+    ...it,
+    varian: it.varian ? Object.values(it.varian).sort((a, b) => b.nominal - a.nominal) : undefined,
+  })).sort((a, b) => a.kolom - b.kolom);
+
+  return NextResponse.json({ perItem, perKelas, bayarHariIni, kelasFilter: kelasFilter || null });
 }
