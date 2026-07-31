@@ -1,7 +1,30 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { animate as animeAnimate } from 'animejs';
 import { hitungStatus } from '@/lib/target';
 import { Icon } from '@/lib/icons';
+
+const fadeSlide = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+  transition: { duration: 0.22, ease: 'easeOut' },
+};
+
+function BarFill({ pct, color }) {
+  return (
+    <div className="bar-track">
+      <motion.div
+        className="bar-fill"
+        style={color ? { background: color } : undefined}
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      />
+    </div>
+  );
+}
 
 const STATUS_LABEL = { lunas: 'Lunas', cicil: 'Nyicil', belum: 'Belum bayar' };
 
@@ -36,6 +59,21 @@ const AKSI_LABEL = {
   'tambah-siswa': { label: 'Tambah Siswa', color: 'lunas' },
   'hapus-siswa': { label: 'Hapus Siswa', color: 'belum' },
 };
+
+function LoginLogo() {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    animeAnimate(ref.current, {
+      scale: [0.6, 1],
+      rotate: [-8, 0],
+      opacity: [0, 1],
+      duration: 700,
+      ease: 'outElastic(1, .6)',
+    });
+  }, []);
+  return <img ref={ref} src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />;
+}
 
 export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -467,8 +505,13 @@ export default function Home() {
   if (!loggedIn) {
     return (
       <div className="login-shell">
-        <div className="card">
-          <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="login-logo-img" />
+        <motion.div
+          className="card"
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+        >
+          <LoginLogo />
           <h2>Dashboard Pembayaran Siswa</h2>
           <div className="subtitle">MI Unwanul Huda 1 — Masuk untuk mengelola data pembayaran</div>
           <label>Username</label>
@@ -486,7 +529,7 @@ export default function Home() {
           </div>
           <button onClick={doLogin}>Masuk</button>
           {loginMsg && <div className="status gagal">{loginMsg}</div>}
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -511,8 +554,10 @@ export default function Home() {
         <div className="nav-section-label">Menu</div>
         <nav>
           {visibleTabs.map(t => (
-            <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-              <span className="ic"><Icon name={TAB_META[t].icon} size={17} /></span> {TAB_META[t].title}
+            <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)} style={{ position: 'relative' }}>
+              {tab === t && <motion.div layoutId="navPill" className="nav-pill" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
+              <span className="ic" style={{ position: 'relative' }}><Icon name={TAB_META[t].icon} size={17} /></span>
+              <span style={{ position: 'relative' }}>{TAB_META[t].title}</span>
             </div>
           ))}
         </nav>
@@ -536,8 +581,10 @@ export default function Home() {
           <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />
           <div className="mobile-menu-dropdown">
             {visibleTabs.map(t => (
-              <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setMobileMenuOpen(false); }}>
-                <span className="ic"><Icon name={TAB_META[t].icon} size={17} /></span> {TAB_META[t].title}
+              <div key={t} className={`nav-item ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setMobileMenuOpen(false); }} style={{ position: 'relative' }}>
+                {tab === t && <div className="nav-pill" />}
+                <span className="ic" style={{ position: 'relative' }}><Icon name={TAB_META[t].icon} size={17} /></span>
+                <span style={{ position: 'relative' }}>{TAB_META[t].title}</span>
               </div>
             ))}
             <div className="mobile-menu-user">
@@ -564,26 +611,25 @@ export default function Home() {
           </div>
         )}
 
-        <div className="main-content" key={tab}>
+        <AnimatePresence mode="wait">
+        <motion.div className="main-content" key={tab} {...fadeSlide}>
           {tab === 'rekap' && (
-            <div className="stat-grid">
-              <div className="stat-tile">
-                <div className="icon-badge blue"><Icon name="case" size={20} /></div>
-                <div><div className="label">Total Kelas</div><div className="value">{rekap?.perKelas.length ?? '—'}</div></div>
-              </div>
-              <div className="stat-tile">
-                <div className="icon-badge amber"><Icon name="students" size={20} /></div>
-                <div><div className="label">Total Siswa</div><div className="value">{totalSiswaSemua || '—'}</div></div>
-              </div>
-              <div className="stat-tile">
-                <div className="icon-badge green"><Icon name="money" size={20} /></div>
-                <div><div className="label">Total Terkumpul</div><div className="value value-money">{rp(totalTerkumpul)}</div></div>
-              </div>
-              <div className="stat-tile">
-                <div className="icon-badge rose"><Icon name="check" size={20} /></div>
-                <div><div className="label">Rata² % Lunas</div><div className="value">{rataPersenLunas}%</div></div>
-              </div>
-            </div>
+            <motion.div className="stat-grid" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.07 } } }}>
+              {[
+                { icon: 'case', color: 'blue', label: 'Total Kelas', value: rekap?.perKelas.length ?? '—' },
+                { icon: 'students', color: 'amber', label: 'Total Siswa', value: totalSiswaSemua || '—' },
+                { icon: 'money', color: 'green', label: 'Total Terkumpul', value: rp(totalTerkumpul), money: true },
+                { icon: 'check', color: 'rose', label: 'Rata² % Lunas', value: `${rataPersenLunas}%` },
+              ].map(s => (
+                <motion.div
+                  key={s.label} className="stat-tile"
+                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
+                >
+                  <div className={`icon-badge ${s.color}`}><Icon name={s.icon} size={20} /></div>
+                  <div><div className="label">{s.label}</div><div className={`value ${s.money ? 'value-money' : ''}`}>{s.value}</div></div>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
 
           {tab === 'bayar' && (
@@ -800,7 +846,7 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="item-status-list">
+                <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
                   {itemList.map(i => {
                     const val = Number(itemValues[i.kolom]) || 0;
                     const ket = itemValues.__keterangan?.[i.kolom];
@@ -809,7 +855,11 @@ export default function Home() {
                     const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
                     const sisa = target ? val - target : null;
                     return (
-                      <div key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}>
+                      <motion.div
+                        key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}
+                        variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
+                        whileTap={{ scale: 0.985 }}
+                      >
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="nm" style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span><span className={`badge-dot ${status === 'lunas' ? 'paid' : 'unpaid'}`} />{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
@@ -819,8 +869,8 @@ export default function Home() {
                           </div>
                           {status === 'cicil' && (
                             <>
-                              <div className="bar-track" style={{ marginTop: 6, height: 6 }}>
-                                <div className="bar-fill" style={{ width: `${pct}%`, background: 'var(--gold)' }} />
+                              <div style={{ marginTop: 6, height: 6 }}>
+                                <BarFill pct={pct} color="var(--gold)" />
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
                                 Sisa {rpSigned(sisa)}
@@ -828,10 +878,10 @@ export default function Home() {
                             </>
                           )}
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
-                </div>
+                </motion.div>
 
                 {role === 'admin' && siswa && kolom && Number(itemValues[kolom]) > 0 && (
                   <div className="fix-actions">
@@ -1208,7 +1258,7 @@ export default function Home() {
                 {rekap?.perKelas.map(k => (
                   <div className="bar-row" key={k.kelas}>
                     <div className="name" title={k.kelas}>{k.kelas}</div>
-                    <div className="bar-track"><div className="bar-fill" style={{ width: `${k.persenLunas}%` }} /></div>
+                    <BarFill pct={k.persenLunas} />
                     <div className="pct">{k.persenLunas}%</div>
                   </div>
                 ))}
@@ -1298,7 +1348,8 @@ export default function Home() {
               </div>
             </>
           )}
-        </div>
+        </motion.div>
+        </AnimatePresence>
       </div>
 
       {confirmDialog && (

@@ -111,8 +111,9 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; }
   transition: background .15s, color .15s, transform .1s;
 }
 .nav-item:hover { background: rgba(255,255,255,0.07); color: white; transform: translateX(2px); }
-.nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(15,122,61,0.35); }
+.nav-item.active { color: white; }
 .nav-item .ic { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nav-pill { position: absolute; inset: 0; background: var(--primary); border-radius: 9px; box-shadow: 0 4px 12px rgba(15,122,61,0.35); z-index: 0; }
 .sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
 .sidebar-user .avatar { width: 34px; height: 34px; border-radius: 999px; background: linear-gradient(135deg, var(--primary), var(--gold)); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
