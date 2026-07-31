@@ -39,9 +39,9 @@ export async function GET(req) {
     const dataRows = rows.slice(1);
     const varianItems = items.filter(it => it.nama === 'PPDB' || it.nama === 'BUKU');
     const labelsByCol = {};
-    for (const it of varianItems) {
+    await Promise.all(varianItems.map(async (it) => {
       labelsByCol[it.kolom] = await getColumnLabels(kelas, colToLetter(it.kolom), dataRows.length);
-    }
+    }));
 
     const siswa = dataRows
       .map((r, ri) => ({ r, ri }))
