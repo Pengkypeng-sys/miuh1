@@ -33,7 +33,6 @@ export default function Home() {
   const [lisensiPesan, setLisensiPesan] = useState('');
   const [lisensiPeringatan, setLisensiPeringatan] = useState(null);
   const [lisensiInfo, setLisensiInfo] = useState(null);
-  const [notifKelas, setNotifKelas] = useState([]);
   const [tab, setTab] = useState('bayar');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -138,14 +137,6 @@ export default function Home() {
     });
   }, []);
 
-  // Notifikasi tunggakan di sidebar — dihitung dari rekap perKelas (totalSiswa - lunasCount)
-  useEffect(() => {
-    if (!loggedIn) return;
-    fetch('/api/rekap').then(r => r.json()).then(res => {
-      if (!res.perKelas) return;
-      setNotifKelas(res.perKelas.filter(k => k.totalSiswa - k.lunasCount > 0).map(k => ({ kelas: k.kelas, belum: k.totalSiswa - k.lunasCount })));
-    });
-  }, [loggedIn]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -532,8 +523,6 @@ export default function Home() {
       <Sidebar
         visibleTabs={visibleTabs} tab={tab} setTab={setTab} nama={nama} role={role} doLogout={doLogout}
         mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
-        notifKelas={notifKelas}
-        onNotifKelasClick={(kel) => { setRekapKelasFilter(kel); setTab('rekap'); }}
         lisensiInfo={lisensiInfo}
       />
 

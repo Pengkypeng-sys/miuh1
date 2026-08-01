@@ -16,6 +16,7 @@ export async function POST() {
     await logAction(session.username, 'kenaikan-kelas', '-', '-', ringkasan.join(' | '), '-', '-');
     return NextResponse.json({ sukses: true, pesan: 'Kenaikan kelas selesai', ringkasan });
   } catch (e) {
+    console.error('POST /api/kenaikan-kelas gagal:', e);
     return NextResponse.json({ sukses: false, pesan: e.message });
   }
 }

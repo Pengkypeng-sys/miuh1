@@ -62,36 +62,7 @@ function NavList({ visibleTabs, tab, setTab, onNavigate }) {
   );
 }
 
-function NotifBell({ notifKelas, onNotifKelasClick }) {
-  const [open, setOpen] = useState(false);
-  const total = notifKelas.reduce((s, k) => s + k.belum, 0);
-  return (
-    <div className="notif-wrap">
-      <div className="nav-item notif-toggle" onClick={() => setOpen(v => !v)}>
-        <span className="ic"><Icon name="bell" size={17} /></span>
-        <span style={{ flex: 1 }}>Notifikasi Tunggakan</span>
-        {total > 0 && <span className="notif-badge">{total}</span>}
-      </div>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: 'hidden' }}>
-            <div className="nav-subgroup">
-              {total === 0 && <div className="notif-empty">Semua siswa lunas 🎉</div>}
-              {notifKelas.map(k => (
-                <div key={k.kelas} className="nav-item notif-row" onClick={() => onNotifKelasClick(k.kelas)}>
-                  <span style={{ flex: 1 }}>{k.kelas}</span>
-                  <span className="notif-badge">{k.belum}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-export function Sidebar({ visibleTabs, tab, setTab, nama, role, doLogout, mobileMenuOpen, setMobileMenuOpen, notifKelas = [], onNotifKelasClick, lisensiInfo }) {
+export function Sidebar({ visibleTabs, tab, setTab, nama, role, doLogout, mobileMenuOpen, setMobileMenuOpen, lisensiInfo }) {
   return (
     <>
       <aside className="sidebar">
@@ -99,8 +70,6 @@ export function Sidebar({ visibleTabs, tab, setTab, nama, role, doLogout, mobile
           <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="logo-img" />
           <div>Dashboard Pembayaran<br /><small>MI Unwanul Huda 1</small></div>
         </div>
-
-        <NotifBell notifKelas={notifKelas} onNotifKelasClick={onNotifKelasClick} />
 
         <div className="nav-section-label">Menu</div>
         <NavList visibleTabs={visibleTabs} tab={tab} setTab={setTab} />

@@ -132,9 +132,6 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; fi
 .nav-subgroup { padding-left: 12px; margin-top: 1px; border-left: 1.5px solid rgba(255,255,255,0.08); margin-left: 21px; }
 .nav-subgroup .nav-item { font-size: 13.5px; padding: 8px 12px; }
 
-.notif-wrap { margin-bottom: 6px; }
-.notif-badge { background: #ef4444; color: white; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; line-height: 1.5; }
-.notif-empty { padding: 8px 12px; font-size: 12.5px; color: rgba(255,255,255,0.5); }
 .sidebar-footer { margin-top: auto; padding: 10px 14px; font-size: 11.5px; color: rgba(255,255,255,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
 .sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; transition: background .15s; }
