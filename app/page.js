@@ -15,6 +15,7 @@ import { KenaikanTab } from '@/components/tabs/KenaikanTab';
 import { KasTab } from '@/components/tabs/KasTab';
 import { LogTab } from '@/components/tabs/LogTab';
 import { RekapTab } from '@/components/tabs/RekapTab';
+import { AkunTab } from '@/components/tabs/AkunTab';
 
 const fadeSlide = {
   initial: { opacity: 0, y: 10 },
@@ -31,6 +32,8 @@ export default function Home() {
   const [lisensiExpired, setLisensiExpired] = useState(false);
   const [lisensiPesan, setLisensiPesan] = useState('');
   const [lisensiPeringatan, setLisensiPeringatan] = useState(null);
+  const [lisensiInfo, setLisensiInfo] = useState(null);
+  const [notifKelas, setNotifKelas] = useState([]);
   const [tab, setTab] = useState('bayar');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -128,11 +131,21 @@ export default function Home() {
       if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); setChecking(false); return; }
       if (res.sukses) {
         setNama(res.nama); setRole(res.role); setLoggedIn(true);
+        setLisensiInfo(res.lisensi || null);
         if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
       }
       setChecking(false);
     });
   }, []);
+
+  // Notifikasi tunggakan di sidebar — dihitung dari rekap perKelas (totalSiswa - lunasCount)
+  useEffect(() => {
+    if (!loggedIn) return;
+    fetch('/api/rekap').then(r => r.json()).then(res => {
+      if (!res.perKelas) return;
+      setNotifKelas(res.perKelas.filter(k => k.totalSiswa - k.lunasCount > 0).map(k => ({ kelas: k.kelas, belum: k.totalSiswa - k.lunasCount })));
+    });
+  }, [loggedIn]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -189,6 +202,7 @@ export default function Home() {
     if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); return; }
     if (res.sukses) {
       setNama(res.nama); setRole(res.role); setLoggedIn(true); setLoginMsg(null);
+      setLisensiInfo(res.lisensi || null);
       if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
     } else {
       setLoginMsg(res.pesan);
@@ -477,11 +491,12 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'rekap'] : ['bayar', 'kas', 'rekap'];
+  const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'rekap', 'akun'] : ['bayar', 'kas', 'rekap', 'akun'];
   const meta = TAB_META[tab];
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
   const p = {
+    nama, role,
     kelas, setKelas, kelasList, siswa, setSiswa, siswaList,
     ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
@@ -517,6 +532,9 @@ export default function Home() {
       <Sidebar
         visibleTabs={visibleTabs} tab={tab} setTab={setTab} nama={nama} role={role} doLogout={doLogout}
         mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen}
+        notifKelas={notifKelas}
+        onNotifKelasClick={(kel) => { setRekapKelasFilter(kel); setTab('rekap'); }}
+        lisensiInfo={lisensiInfo}
       />
 
       <div className="main">
@@ -544,6 +562,7 @@ export default function Home() {
             {tab === 'kas' && <KasTab p={p} />}
             {tab === 'log' && role === 'admin' && <LogTab p={p} />}
             {tab === 'rekap' && <RekapTab p={p} />}
+            {tab === 'akun' && <AkunTab p={p} />}
           </motion.div>
         </AnimatePresence>
       </div>

@@ -131,6 +131,11 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; fi
 .nav-group-header { color: #a8c9af; }
 .nav-subgroup { padding-left: 12px; margin-top: 1px; border-left: 1.5px solid rgba(255,255,255,0.08); margin-left: 21px; }
 .nav-subgroup .nav-item { font-size: 13.5px; padding: 8px 12px; }
+
+.notif-wrap { margin-bottom: 6px; }
+.notif-badge { background: #ef4444; color: white; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; line-height: 1.5; }
+.notif-empty { padding: 8px 12px; font-size: 12.5px; color: rgba(255,255,255,0.5); }
+.sidebar-footer { margin-top: auto; padding: 10px 14px; font-size: 11.5px; color: rgba(255,255,255,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
 .sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; }
 .sidebar-user { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 9px; transition: background .15s; }
 .sidebar-user:hover { background: rgba(255,255,255,0.06); }
@@ -293,11 +298,14 @@ button:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; fi
 .item-manage-row .nm { font-size: 13.5px; font-weight: 600; color: #334155; }
 .item-manage-row .target { font-size: 12.5px; color: var(--muted); }
 .kategori-label { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; padding: 0 10px; }
-.icon-pick { width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.reorder-btns { display: flex; flex-direction: column; gap: 1px; }
+.varian-group-header { cursor: pointer; }
+.varian-group-body { display: flex; flex-direction: column; gap: 2px; padding-left: 22px; border-left: 2px solid var(--border); margin-left: 13px; margin-top: 2px; }
+.icon-pick { width: 32px; height: 32px; padding: 0; margin: 0; box-shadow: none; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
 .icon-pick:hover { border-color: var(--primary); color: var(--primary); }
 .icon-pick.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
 .reorder-btns { display: flex; flex-direction: column; gap: 1px; }
-.reorder-btn { width: 18px; height: 15px; border: none; background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.reorder-btn { width: 18px; height: 15px; padding: 0; margin: 0; border: none; background: transparent; box-shadow: none; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
 .reorder-btn:hover:not(:disabled) { background: var(--primary-light); color: var(--primary); }
 .reorder-btn:disabled { opacity: .25; cursor: not-allowed; }
 
