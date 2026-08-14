@@ -529,7 +529,7 @@ export default function Home() {
       <div className="main">
         <div className="main-topbar">
           <div>
-            <div className="breadcrumb">Dashboard <span>/</span> <span className="current">{meta.title}</span></div>
+            <div className="breadcrumb">{tab === 'rekap' ? 'Dashboard' : <>Dashboard <span>/</span> <span className="current">{meta.title}</span></>}</div>
             <h1><span className="ic-badge"><Icon name={meta.icon} size={16} /></span> {meta.title}</h1>
             <div className="desc">{meta.desc}</div>
           </div>
