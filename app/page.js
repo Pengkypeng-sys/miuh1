@@ -243,7 +243,7 @@ export default function Home() {
     const q = tanggalKas ? `?tanggal=${encodeURIComponent(tanggalKas)}` : '';
     const data = await fetch(`/api/kas${q}`).then(r => r.json());
     if (cekSessionExpired(data)) { setLoadingKas(false); return; }
-    setKas(data.sukses === false ? null : data);
+    setKas(data.sukses === false ? { error: data.pesan || 'Gagal ambil data kas' } : data);
     setLoadingKas(false);
   }
 

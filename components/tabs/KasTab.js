@@ -27,7 +27,7 @@ export function KasTab({ p }) {
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : 'Kas Hari Ini'}</div>
-            <div className="panel-desc">{kas ? kas.tanggal : '—'}</div>
+            <div className="panel-desc">{kas && !kas.error ? kas.tanggal : '—'}</div>
           </div>
           <div className="toolbar no-print">
             <input
@@ -44,7 +44,8 @@ export function KasTab({ p }) {
         </div>
 
         {loadingKas && <div className="empty-state"><span className="spinner" />Memuat...</div>}
-        {!loadingKas && kas && (
+        {!loadingKas && kas?.error && <div className="status gagal">{kas.error}</div>}
+        {!loadingKas && kas && !kas.error && (
           <>
             <div className="print-only print-kop">
               <img src="/logo-mi.png" alt="Logo" className="print-kop-logo" />
