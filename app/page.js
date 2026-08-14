@@ -95,6 +95,7 @@ export default function Home() {
 
   const [rekap, setRekap] = useState(null);
   const [rekapKelasFilter, setRekapKelasFilter] = useState('');
+  const [tanggalBayarFilter, setTanggalBayarFilter] = useState(''); // '' = hari ini, else dd/MM/yyyy
   const [varianFilter, setVarianFilter] = useState({});
   const [kelasDetailPilih, setKelasDetailPilih] = useState('');
   const [kelasDetail, setKelasDetail] = useState(null);
@@ -206,12 +207,15 @@ export default function Home() {
   }
 
   async function loadRekap() {
-    const url = rekapKelasFilter ? `/api/rekap?kelas=${encodeURIComponent(rekapKelasFilter)}` : '/api/rekap';
-    const data = await fetch(url).then(r => r.json());
+    const params = new URLSearchParams();
+    if (rekapKelasFilter) params.set('kelas', rekapKelasFilter);
+    if (tanggalBayarFilter) params.set('tanggalBayar', tanggalBayarFilter);
+    const qs = params.toString();
+    const data = await fetch(`/api/rekap${qs ? `?${qs}` : ''}`).then(r => r.json());
     setRekap(data);
   }
 
-  useEffect(() => { if (tab === 'rekap') loadRekap(); }, [rekapKelasFilter]);
+  useEffect(() => { if (tab === 'rekap') loadRekap(); }, [rekapKelasFilter, tanggalBayarFilter]);
 
   // auto-refresh tab yang lagi aktif tiap 15 detik, biar data selalu up-to-date tanpa klik Refresh manual.
   // "Data Siswa per Kelas" gak ikut auto-refresh — bikin loading/reset pas lagi dibaca/dicari, ganggu.
@@ -222,7 +226,7 @@ export default function Home() {
       else if (tab === 'log') loadLog();
     }, 15000);
     return () => clearInterval(interval);
-  }, [tab, tanggalKas, tanggalLog, rekapKelasFilter]);
+  }, [tab, tanggalKas, tanggalLog, rekapKelasFilter, tanggalBayarFilter]);
 
   useEffect(() => {
     if (tab !== 'rekap' || !kelasDetailPilih) return;
@@ -513,7 +517,7 @@ export default function Home() {
 
     tanggalLog, setTanggalLog, logData, loadingLog, loadLog,
 
-    rekap, loadRekap, rekapKelasFilter, setRekapKelasFilter,
+    rekap, loadRekap, rekapKelasFilter, setRekapKelasFilter, tanggalBayarFilter, setTanggalBayarFilter,
     kelasDetailPilih, setKelasDetailPilih, cariSiswaDetail, setCariSiswaDetail,
     loadingDetail, kelasDetail, varianFilter, setVarianFilter,
   };

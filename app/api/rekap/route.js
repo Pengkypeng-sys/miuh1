@@ -13,10 +13,11 @@ export async function GET(req) {
 
   if (DEMO_MODE) return NextResponse.json(DEMO_REKAP);
 
-  const kelasFilter = new URL(req.url).searchParams.get('kelas'); // null = semua kelas
+  const params = new URL(req.url).searchParams;
+  const kelasFilter = params.get('kelas'); // null = semua kelas
+  const tanggalBayar = params.get('tanggalBayar') || tanggalJakarta().tanggal;
 
   try {
-    const today = tanggalJakarta().tanggal;
     const kelasList = kelasFilter ? [kelasFilter] : KELAS_LIST;
 
     const [itemRows, siswaRows] = await Promise.all([
@@ -58,7 +59,7 @@ export async function GET(req) {
           }
         }
 
-        if (p.terakhir_diisi && tanggalJakarta(new Date(p.terakhir_diisi)).tanggal === today) {
+        if (p.terakhir_diisi && tanggalJakarta(new Date(p.terakhir_diisi)).tanggal === tanggalBayar) {
           const siswaInfo = siswaRows.find(s => s.id === p.siswa_id);
           const itemInfo = itemMap[p.item_id];
           const label = itemInfo?.varian && p.keterangan ? `${itemInfo.nama} (${p.keterangan})` : itemInfo?.nama;
@@ -83,7 +84,7 @@ export async function GET(req) {
       varian: it.varian ? Object.values(it.varian).sort((a, b) => b.nominal - a.nominal) : undefined,
     })).sort((a, b) => a.kolom - b.kolom);
 
-    return NextResponse.json({ perItem, perKelas, bayarHariIni, kelasFilter: kelasFilter || null });
+    return NextResponse.json({ perItem, perKelas, bayarHariIni, kelasFilter: kelasFilter || null, tanggalBayar });
   } catch (e) {
     console.error('GET /api/rekap gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });

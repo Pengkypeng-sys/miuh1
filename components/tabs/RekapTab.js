@@ -4,13 +4,14 @@ import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
 import { BarFill } from '@/components/BarFill';
-import { rp, rpSingkat, targetSebenarnya } from '@/lib/format';
+import { rp, rpSingkat, targetSebenarnya, ddmmyyyyToIso, isoToDdmmyyyy } from '@/lib/format';
 
 export function RekapTab({ p }) {
   const {
     rekap, loadRekap, kelasList, rekapKelasFilter, setRekapKelasFilter,
     kelasDetailPilih, setKelasDetailPilih, cariSiswaDetail, setCariSiswaDetail,
     loadingDetail, kelasDetail, varianFilter, setVarianFilter,
+    tanggalBayarFilter, setTanggalBayarFilter,
   } = p;
 
   const totalTerkumpul = rekap ? rekap.perItem.reduce((s, i) => s + i.nominal, 0) : 0;
@@ -135,8 +136,16 @@ export function RekapTab({ p }) {
 
       <div className="two-col-panels">
         <div className="panel">
-          <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Rekap per Item</div>
-          <div className="panel-desc">Jumlah siswa terisi & total nominal per jenis pembayaran (PPDB/BUKU dipecah per gelombang & kelas)</div>
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Rekap per Item</div>
+              <div className="panel-desc">Jumlah siswa terisi & total nominal per jenis pembayaran (PPDB/BUKU dipecah per gelombang & kelas)</div>
+            </div>
+            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={rekapKelasFilter} onChange={e => setRekapKelasFilter(e.target.value)}>
+              <option value="">Semua Kelas</option>
+              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
           <div className="table-wrap">
             <table><thead><tr><th>Item</th><th className="num">Terisi</th><th className="num">Total Rp</th></tr></thead>
               <tbody>
@@ -180,12 +189,21 @@ export function RekapTab({ p }) {
         </div>
 
         <div className="panel">
-          <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Bayar Hari Ini</div>
-          <div className="panel-desc">Transaksi yang masuk hari ini</div>
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Bayar</div>
+              <div className="panel-desc">Transaksi yang masuk tanggal terpilih</div>
+            </div>
+            <input
+              type="date" className="no-print" style={{ width: 'auto' }}
+              value={tanggalBayarFilter ? ddmmyyyyToIso(tanggalBayarFilter) : new Date().toISOString().slice(0, 10)}
+              onChange={e => setTanggalBayarFilter(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
+            />
+          </div>
           <div className="table-wrap">
             <table><thead><tr><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
               <tbody>
-                {rekap && rekap.bayarHariIni.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi hari ini</td></tr>}
+                {rekap && rekap.bayarHariIni.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi tanggal ini</td></tr>}
                 {rekap?.bayarHariIni.map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
               </tbody>
             </table>
