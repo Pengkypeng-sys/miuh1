@@ -520,9 +520,10 @@ tfoot tr:hover { background: #f8fafc; }
   .table-wrap { overflow: visible !important; }
   body { background: #fff !important; }
 
-  .matrix-table { border-collapse: collapse; width: 100%; font-size: 10.5px; }
-  .matrix-table th, .matrix-table td { border: 1px solid #ccc; padding: 5px 6px; }
-  .matrix-table thead th { background: #eef6f1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .matrix-table { border-collapse: collapse; width: 100%; font-size: 8px; table-layout: fixed; }
+  .matrix-table th, .matrix-table td { border: 1px solid #ccc; padding: 3px 3px; overflow-wrap: break-word; }
+  .matrix-table th:first-child, .matrix-table td:first-child { width: 15%; text-align: left; }
+  .matrix-table thead th { background: #eef6f1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; white-space: normal; line-height: 1.2; }
   .matrix-table tbody tr:nth-child(even) { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   .status-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 4px; padding: 2px 6px; font-weight: 700; }
