@@ -67,9 +67,12 @@ export function RekapTab({ p }) {
             <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Data Siswa per Kelas</div>
             <div className="panel-desc">Status pembayaran tiap siswa, per item</div>
           </div>
-          <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
-            {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
+              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <button className="secondary action-btn btn-icon no-print" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
+          </div>
         </div>
 
         <div className="search-box no-print" style={{ marginBottom: 12, maxWidth: 320 }}>
