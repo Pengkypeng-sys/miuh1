@@ -238,9 +238,15 @@ export function RekapTab({ p }) {
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="money" size={14} /></span> Piutang per Siswa</div>
-            <div className="panel-desc">Siswa yang belum lunas & sisa kekurangan bayar ({rekapKelasFilter || 'semua kelas'})</div>
+            <div className="panel-desc">Siswa yang belum lunas & sisa kekurangan bayar</div>
           </div>
-          <input className="no-print" style={{ width: 'auto' }} placeholder="cari nama siswa..." value={cariPiutang} onChange={e => setCariPiutang(e.target.value)} />
+          <div className="toolbar no-print">
+            <select style={{ width: 'auto', margin: 0 }} value={rekapKelasFilter} onChange={e => setRekapKelasFilter(e.target.value)}>
+              <option value="">Semua Kelas</option>
+              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <input style={{ width: 'auto' }} placeholder="cari nama siswa..." value={cariPiutang} onChange={e => setCariPiutang(e.target.value)} />
+          </div>
         </div>
         <div className="table-wrap">
           <table><thead><tr><th>Siswa</th><th>Kelas</th><th>Kurang di Item</th><th className="num">Total Kurang</th></tr></thead>
