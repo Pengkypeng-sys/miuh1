@@ -68,7 +68,7 @@ export function Sidebar({ visibleTabs, tab, setTab, nama, role, doLogout, mobile
       <aside className="sidebar">
         <div className="sidebar-brand">
           <img src="/logo-mi.png" alt="Logo MI Unwanul Huda 1" className="logo-img" />
-          <div>Dashboard Pembayaran<br /><small>MI Unwanul Huda 1</small></div>
+          <div>Dashboard<br /><small>MI Unwanul Huda 1</small></div>
         </div>
 
         <div className="nav-section-label">Menu</div>
