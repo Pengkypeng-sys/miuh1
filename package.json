@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.111.0",
+    "@supabase/supabase-js": "^2.112.3",
     "animejs": "^4.5.0",
     "jsonwebtoken": "^9.0.2",
     "motion": "^12.43.0",
