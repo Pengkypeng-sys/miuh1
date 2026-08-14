@@ -500,10 +500,33 @@ tfoot tr:hover { background: #f8fafc; }
 @media (max-width: 720px) { .license-warning { padding: 10px 16px; font-size: 12px; } }
 
 /* ===== PRINT (Download PDF pake browser print-to-PDF) ===== */
+.print-only { display: none; }
+.print-kop {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 12px; margin-bottom: 14px; border-bottom: 2px solid #1a7a4c;
+}
+.print-kop-logo { width: 46px; height: 46px; object-fit: contain; }
+.print-kop-sekolah { font-size: 16px; font-weight: 800; color: #111; }
+.print-kop-judul { font-size: 13px; color: #333; margin-top: 2px; }
+.print-kop-tanggal { font-size: 11px; color: #777; margin-top: 2px; }
+
 @media print {
-  .no-print, .sidebar, .main-topbar, .mobile-menu-btn { display: none !important; }
+  @page { size: landscape; margin: 14mm 10mm; }
+  .no-print, .sidebar, .main-topbar, .mobile-menu-btn, .stat-grid, .panel:not(:has(.matrix-table)) { display: none !important; }
   .app-shell, .main, .main-content { display: block !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
-  .panel { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .panel { box-shadow: none !important; border: none !important; padding: 0 !important; break-inside: avoid; }
+  .panel-header, .panel-desc { display: none !important; }
+  .print-only { display: flex; }
   .table-wrap { overflow: visible !important; }
   body { background: #fff !important; }
+
+  .matrix-table { border-collapse: collapse; width: 100%; font-size: 10.5px; }
+  .matrix-table th, .matrix-table td { border: 1px solid #ccc; padding: 5px 6px; }
+  .matrix-table thead th { background: #eef6f1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .matrix-table tbody tr:nth-child(even) { background: #fafafa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .status-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; border-radius: 4px; padding: 2px 6px; font-weight: 700; }
+  .status-chip.lunas { background: #dcf5e6 !important; color: #147a42 !important; }
+  .status-chip.cicil { background: #fdf1d6 !important; color: #96650a !important; }
+  .status-chip.belum { background: transparent !important; color: #999 !important; }
 }

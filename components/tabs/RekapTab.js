@@ -83,6 +83,14 @@ export function RekapTab({ p }) {
         {loadingDetail && <div className="empty-state"><span className="spinner" />Memuat...</div>}
         {!loadingDetail && kelasDetail && (
           <div className="table-wrap">
+            <div className="print-only print-kop">
+              <img src="/logo-mi.png" alt="" className="print-kop-logo" />
+              <div>
+                <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}</div>
+                <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+              </div>
+            </div>
             <table className="matrix-table">
               <thead>
                 <tr>
