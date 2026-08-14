@@ -24,6 +24,14 @@ const DEMO_KAS = {
     { tanggal: '10/07', saldo: 0 }, { tanggal: '11/07', saldo: 150000 }, { tanggal: '12/07', saldo: 300000 },
     { tanggal: '13/07', saldo: 550000 },
   ],
+  rekapBulanan: [
+    { bulan: 'Mar 2026', masuk: 4200000, keluar: 900000, saldo: 3300000 },
+    { bulan: 'Apr 2026', masuk: 5100000, keluar: 1200000, saldo: 3900000 },
+    { bulan: 'Mei 2026', masuk: 3800000, keluar: 700000, saldo: 3100000 },
+    { bulan: 'Jun 2026', masuk: 4600000, keluar: 1000000, saldo: 3600000 },
+    { bulan: 'Jul 2026', masuk: 5300000, keluar: 1500000, saldo: 3800000 },
+    { bulan: 'Agu 2026', masuk: 850000, keluar: 300000, saldo: 550000 },
+  ],
 };
 DEMO_KAS.rekapPerItem = rekapPerItem(DEMO_KAS.transaksiMasuk);
 DEMO_KAS.rekapPerKategori = rekapPerKategori(DEMO_KAS.transaksiKeluar);
@@ -82,6 +90,39 @@ function hitungTrend7Hari(logRows, pengeluaranRows) {
   return hasilList;
 }
 
+const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+// Masuk/keluar/saldo per bulan, 6 bulan terakhir (termasuk bulan ini)
+function hitungRekapBulanan(logRows, pengeluaranRows) {
+  const perBulan = {}; // 'YYYY-MM' -> { masuk, keluar }
+  logRows.forEach(r => {
+    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta <= 0) return;
+    const { tanggal } = tanggalJakarta(new Date(r.waktu));
+    const [dd, mm, yyyy] = tanggal.split('/');
+    const key = `${yyyy}-${mm}`;
+    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0 };
+    perBulan[key].masuk += delta;
+  });
+  pengeluaranRows.forEach(r => {
+    if (!r.tanggal) return;
+    const key = r.tanggal.slice(0, 7); // 'YYYY-MM-DD' -> 'YYYY-MM'
+    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0 };
+    perBulan[key].keluar += Number(r.nominal) || 0;
+  });
+
+  const hasilList = [];
+  const now = new Date(tanggalJakarta().tanggal.split('/').reverse().join('-'));
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const { masuk = 0, keluar = 0 } = perBulan[key] || {};
+    hasilList.push({ bulan: `${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`, masuk, keluar, saldo: masuk - keluar });
+  }
+  return hasilList;
+}
+
 // Uang masuk = delta baru-lama dari log_aktivitas (aksi submit-pembayaran/edit-*)
 // Uang keluar = tabel pengeluaran
 export async function GET(req) {
@@ -131,6 +172,7 @@ export async function GET(req) {
       rekapPerItem: rekapPerItem(transaksiMasuk),
       rekapPerKategori: rekapPerKategori(transaksiKeluar),
       trend7hari: hitungTrend7Hari(logRows, pengeluaranRows),
+      rekapBulanan: hitungRekapBulanan(logRows, pengeluaranRows),
     });
   } catch (e) {
     console.error('GET /api/kas gagal:', e);

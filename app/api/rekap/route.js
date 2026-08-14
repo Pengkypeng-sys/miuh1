@@ -7,6 +7,30 @@ import { hitungStatus } from '@/lib/target';
 import { targetSebenarnya } from '@/lib/format';
 
 const VARIAN_ITEMS = ['PPDB', 'BUKU']; // item yang dipecah per Gel./Kelas Buku waktu ditampilin
+const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+// Total terkumpul per bulan, 6 bulan terakhir (termasuk bulan ini) — buat grafik trend di Dashboard
+function hitungTrenBulanan(logRows) {
+  const perBulan = {}; // 'YYYY-MM' -> total
+  logRows.forEach(r => {
+    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta <= 0) return;
+    const { tanggal } = tanggalJakarta(new Date(r.waktu));
+    const [dd, mm, yyyy] = tanggal.split('/');
+    const key = `${yyyy}-${mm}`;
+    perBulan[key] = (perBulan[key] || 0) + delta;
+  });
+
+  const hasilList = [];
+  const now = new Date(tanggalJakarta().tanggal.split('/').reverse().join('-'));
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    hasilList.push({ bulan: `${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`, total: perBulan[key] || 0 });
+  }
+  return hasilList;
+}
 
 export async function GET(req) {
   const session = await getSession();
@@ -21,9 +45,10 @@ export async function GET(req) {
   try {
     const kelasList = kelasFilter ? [kelasFilter] : KELAS_LIST;
 
-    const [itemRows, siswaRows] = await Promise.all([
+    const [itemRows, siswaRows, logRows] = await Promise.all([
       db().from('item_pembayaran').select('*').order('urutan').then(r => throwIfError(r)),
       db().from('siswa').select('id, nama, kelas').in('kelas', kelasList).then(r => throwIfError(r)),
+      db().from('log_aktivitas').select('waktu, aksi, lama, baru').then(r => throwIfError(r)),
     ]);
 
     const perKelas = kelasList.map(kelas => ({ kelas, totalSiswa: 0, lunasCount: 0, persenLunas: 0 }));
@@ -103,7 +128,7 @@ export async function GET(req) {
 
     piutang.sort((a, b) => b.kurang - a.kurang);
 
-    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, kelasFilter: kelasFilter || null, tanggalBayar });
+    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, trendBulanan: hitungTrenBulanan(logRows), kelasFilter: kelasFilter || null, tanggalBayar });
   } catch (e) {
     console.error('GET /api/rekap gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });

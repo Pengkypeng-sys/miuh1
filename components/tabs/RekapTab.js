@@ -40,6 +40,28 @@ export function RekapTab({ p }) {
         ))}
       </motion.div>
 
+      {rekap?.trendBulanan && (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="chart" size={14} /></span> Total Terkumpul per Bulan</div>
+              <div className="panel-desc">Trend pembayaran masuk 6 bulan terakhir</div>
+            </div>
+          </div>
+          <div className="trend-sparkline" style={{ height: 90 }}>
+            {(() => {
+              const max = Math.max(1, ...rekap.trendBulanan.map(b => b.total));
+              return rekap.trendBulanan.map((b, i) => (
+                <div key={i} className="trend-bar-col" title={`${b.bulan}: ${rp(b.total)}`}>
+                  <div className="trend-bar in" style={{ height: `${Math.max(4, (b.total / max) * 74)}px` }} />
+                  <div className="trend-bar-label">{b.bulan}</div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
       <div className="panel">
         <div className="panel-header">
           <div>
