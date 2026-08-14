@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
+import { targetSebenarnya } from '@/lib/format';
 
 const VARIAN_ITEMS = ['PPDB', 'BUKU']; // item yang dipecah per Gel./Kelas Buku waktu ditampilin
 
@@ -35,6 +36,7 @@ export async function GET(req) {
     });
 
     const bayarHariIni = [];
+    const piutang = [];
 
     if (siswaRows.length > 0) {
       const siswaIds = siswaRows.map(s => s.id);
@@ -74,6 +76,21 @@ export async function GET(req) {
         const pay = paymentsBySiswa[s.id] || {};
         const semuaLunas = applicableItems.length > 0 && applicableItems.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');
         if (semuaLunas) perKelas[idx].lunasCount++;
+
+        // piutang: total kurang bayar per siswa dari item yang belum lunas
+        let kurangTotal = 0;
+        const itemKurang = [];
+        applicableItems.forEach(it => {
+          const p = pay[it.id];
+          const target = targetSebenarnya(it.nama, p?.keterangan, it.target);
+          const status = hitungStatus(p?.nominal ?? '', target);
+          if (status === 'lunas') return;
+          const kurang = target - (Number(p?.nominal) || 0);
+          if (kurang <= 0) return;
+          kurangTotal += kurang;
+          itemKurang.push({ nama: it.nama, kurang });
+        });
+        if (kurangTotal > 0) piutang.push({ kelas: s.kelas, siswa: s.nama, kurang: kurangTotal, items: itemKurang });
       });
     }
 
@@ -84,7 +101,9 @@ export async function GET(req) {
       varian: it.varian ? Object.values(it.varian).sort((a, b) => b.nominal - a.nominal) : undefined,
     })).sort((a, b) => a.kolom - b.kolom);
 
-    return NextResponse.json({ perItem, perKelas, bayarHariIni, kelasFilter: kelasFilter || null, tanggalBayar });
+    piutang.sort((a, b) => b.kurang - a.kurang);
+
+    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, kelasFilter: kelasFilter || null, tanggalBayar });
   } catch (e) {
     console.error('GET /api/rekap gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });

@@ -1,5 +1,5 @@
 'use client';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
@@ -14,6 +14,7 @@ export function RekapTab({ p }) {
     tanggalBayarFilter, setTanggalBayarFilter,
   } = p;
 
+  const [cariPiutang, setCariPiutang] = useState('');
   const totalTerkumpul = rekap ? rekap.perItem.reduce((s, i) => s + i.nominal, 0) : 0;
   const totalSiswaSemua = rekap ? rekap.perKelas.reduce((s, k) => s + k.totalSiswa, 0) : 0;
   const rataPersenLunas = rekap && rekap.perKelas.length
@@ -208,6 +209,39 @@ export function RekapTab({ p }) {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-title"><span className="ic-badge"><Icon name="money" size={14} /></span> Piutang per Siswa</div>
+            <div className="panel-desc">Siswa yang belum lunas & sisa kekurangan bayar ({rekapKelasFilter || 'semua kelas'})</div>
+          </div>
+          <input className="no-print" style={{ width: 'auto' }} placeholder="cari nama siswa..." value={cariPiutang} onChange={e => setCariPiutang(e.target.value)} />
+        </div>
+        <div className="table-wrap">
+          <table><thead><tr><th>Siswa</th><th>Kelas</th><th>Kurang di Item</th><th className="num">Total Kurang</th></tr></thead>
+            <tbody>
+              {rekap && rekap.piutang.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Semua siswa udah lunas</td></tr>}
+              {rekap?.piutang.filter(pi => pi.siswa.toLowerCase().includes(cariPiutang.toLowerCase())).map((pi, i) => (
+                <tr key={i}>
+                  <td>{pi.siswa}</td>
+                  <td>{pi.kelas}</td>
+                  <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{pi.items.map(it => it.nama).join(', ')}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>{rp(pi.kurang)}</td>
+                </tr>
+              ))}
+            </tbody>
+            {rekap && rekap.piutang.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td colSpan={3} style={{ fontWeight: 700 }}>Total Piutang</td>
+                  <td className="num" style={{ fontWeight: 700 }}>{rp(rekap.piutang.reduce((s, pi) => s + pi.kurang, 0))}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         </div>
       </div>
     </>
