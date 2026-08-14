@@ -3,6 +3,8 @@ import { getSession, clearSessionCookie } from '@/lib/auth';
 import { statusLisensi } from '@/lib/license';
 import { DEMO_MODE } from '@/lib/demoData';
 
+export const dynamic = 'force-dynamic';
+
 // Dipanggil pas reload halaman — cek cookie httpOnly masih valid apa nggak
 export async function GET() {
   try {
