@@ -11,7 +11,8 @@ export async function GET() {
     const lisensi = DEMO_MODE ? { expired: false, peringatan: false, hariTersisa: 99, tanggalExpiry: '-' } : await statusLisensi();
     if (lisensi.expired) {
       await clearSessionCookie();
-      return NextResponse.json({ sukses: false, expired: true, pesan: `Masa aktif dashboard sudah habis (${lisensi.tanggalExpiry}). Hubungi admin buat perpanjang.` });
+      const debugUrl = (process.env.SUPABASE_URL || 'KOSONG').slice(0, 30);
+      return NextResponse.json({ sukses: false, expired: true, pesan: `Masa aktif dashboard sudah habis (${lisensi.tanggalExpiry}). Hubungi admin buat perpanjang.`, debugUrl });
     }
 
     const session = await getSession();
