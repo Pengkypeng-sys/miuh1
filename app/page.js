@@ -482,7 +482,7 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = role === 'admin' ? ['bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'rekap', 'akun'] : ['bayar', 'kas', 'rekap', 'akun'];
+  const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun'] : ['rekap', 'bayar', 'kas', 'akun'];
   const meta = TAB_META[tab];
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
