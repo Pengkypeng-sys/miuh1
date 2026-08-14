@@ -16,11 +16,17 @@ const DEMO_KAS = {
     { tanggal: '13/07/2026', jam: '10:40:02', user: 'guru.miuh1', kelas: 'KELAS 2', siswa: 'Dewi Lestari', item: 'SPP', nominal: 70000 },
   ],
   transaksiKeluar: [
-    { tanggal: '13/07/2026', keterangan: 'Beli ATK kantor', nominal: 150000, user: 'mi.uh1' },
-    { tanggal: '13/07/2026', keterangan: 'Konsumsi rapat guru', nominal: 150000, user: 'mi.uh1' },
+    { tanggal: '13/07/2026', keterangan: 'Beli ATK kantor', nominal: 150000, user: 'mi.uh1', kategori: 'ATK' },
+    { tanggal: '13/07/2026', keterangan: 'Konsumsi rapat guru', nominal: 150000, user: 'mi.uh1', kategori: 'Konsumsi' },
+  ],
+  trend7hari: [
+    { tanggal: '07/07', saldo: 200000 }, { tanggal: '08/07', saldo: -50000 }, { tanggal: '09/07', saldo: 400000 },
+    { tanggal: '10/07', saldo: 0 }, { tanggal: '11/07', saldo: 150000 }, { tanggal: '12/07', saldo: 300000 },
+    { tanggal: '13/07', saldo: 550000 },
   ],
 };
 DEMO_KAS.rekapPerItem = rekapPerItem(DEMO_KAS.transaksiMasuk);
+DEMO_KAS.rekapPerKategori = rekapPerKategori(DEMO_KAS.transaksiKeluar);
 
 // Kelompokin transaksi hari ini per jenis item: berapa orang (siswa unik) & total Rp
 function rekapPerItem(transaksiMasuk) {
@@ -33,6 +39,47 @@ function rekapPerItem(transaksiMasuk) {
   return Object.values(map)
     .map(({ item, siswaSet, total }) => ({ item, orang: siswaSet.size, total }))
     .sort((a, b) => b.total - a.total);
+}
+
+// Kelompokin pengeluaran per kategori: berapa transaksi & total Rp
+function rekapPerKategori(transaksiKeluar) {
+  const map = {};
+  transaksiKeluar.forEach(t => {
+    const kat = t.kategori || 'Lainnya';
+    if (!map[kat]) map[kat] = { kategori: kat, jumlah: 0, total: 0 };
+    map[kat].jumlah += 1;
+    map[kat].total += t.nominal;
+  });
+  return Object.values(map).sort((a, b) => b.total - a.total);
+}
+
+// Saldo per hari 7 hari terakhir (termasuk hari ini), dari log_aktivitas + pengeluaran mentah (belum difilter tanggal)
+function hitungTrend7Hari(logRows, pengeluaranRows) {
+  const perHari = {}; // 'YYYY-MM-DD' -> { masuk, keluar }
+  logRows.forEach(r => {
+    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta <= 0) return;
+    const key = tanggalJakarta(new Date(r.waktu)).tanggal.split('/').reverse().join('-');
+    if (!perHari[key]) perHari[key] = { masuk: 0, keluar: 0 };
+    perHari[key].masuk += delta;
+  });
+  pengeluaranRows.forEach(r => {
+    if (!r.tanggal) return;
+    if (!perHari[r.tanggal]) perHari[r.tanggal] = { masuk: 0, keluar: 0 };
+    perHari[r.tanggal].keluar += Number(r.nominal) || 0;
+  });
+
+  const hasilList = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const ddmmyyyy = tanggalJakarta(d).tanggal; // 'DD/MM/YYYY'
+    const [dd, mm, yyyy] = ddmmyyyy.split('/');
+    const key = `${yyyy}-${mm}-${dd}`;
+    const { masuk = 0, keluar = 0 } = perHari[key] || {};
+    hasilList.push({ tanggal: `${dd}/${mm}`, saldo: masuk - keluar });
+  }
+  return hasilList;
 }
 
 // Uang masuk = delta baru-lama dari log_aktivitas (aksi submit-pembayaran/edit-*)
@@ -50,7 +97,7 @@ export async function GET(req) {
   try {
     const [logRows, pengeluaranRows] = await Promise.all([
       db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').then(r => throwIfError(r)),
-      db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh').then(r => throwIfError(r)),
+      db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh, kategori').then(r => throwIfError(r)),
     ]);
 
     const transaksiMasuk = [];
@@ -74,7 +121,7 @@ export async function GET(req) {
       if (!semua && tgl !== tanggal) return;
       const n = Number(r.nominal) || 0;
       keluar += n;
-      transaksiKeluar.push({ tanggal: tgl, keterangan: r.keterangan, nominal: n, user: r.dicatat_oleh });
+      transaksiKeluar.push({ tanggal: tgl, keterangan: r.keterangan, nominal: n, user: r.dicatat_oleh, kategori: r.kategori || 'Lainnya' });
     });
 
     return NextResponse.json({
@@ -82,6 +129,8 @@ export async function GET(req) {
       transaksiMasuk: transaksiMasuk.sort((a, b) => (a.tanggal + a.jam).localeCompare(b.tanggal + b.jam)).reverse(),
       transaksiKeluar,
       rekapPerItem: rekapPerItem(transaksiMasuk),
+      rekapPerKategori: rekapPerKategori(transaksiKeluar),
+      trend7hari: hitungTrend7Hari(logRows, pengeluaranRows),
     });
   } catch (e) {
     console.error('GET /api/kas gagal:', e);
@@ -94,13 +143,13 @@ export async function POST(req) {
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Session habis, silakan login ulang', sessionExpired: true });
   if (session.role !== 'admin') return NextResponse.json({ sukses: false, pesan: 'Hanya admin yang bisa mencatat pengeluaran' });
 
-  const { keterangan, nominal } = await req.json();
+  const { keterangan, nominal, kategori } = await req.json();
   if (!keterangan || !nominal) return NextResponse.json({ sukses: false, pesan: 'Isi keterangan dan nominal' });
 
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: 'Pengeluaran dicatat (demo, gak tersimpan)' });
 
   try {
-    throwIfError(await db().from('pengeluaran').insert({ keterangan, nominal: Number(nominal), dicatat_oleh: session.username }));
+    throwIfError(await db().from('pengeluaran').insert({ keterangan, nominal: Number(nominal), dicatat_oleh: session.username, kategori: kategori || 'Lainnya' }));
     return NextResponse.json({ sukses: true, pesan: `Pengeluaran "${keterangan}" - Rp ${Number(nominal).toLocaleString('id-ID')} dicatat` });
   } catch (e) {
     console.error('POST /api/kas gagal:', e);

@@ -106,6 +106,7 @@ export default function Home() {
   const [loadingKas, setLoadingKas] = useState(false);
   const [ketPengeluaran, setKetPengeluaran] = useState('');
   const [nominalPengeluaran, setNominalPengeluaran] = useState('');
+  const [kategoriPengeluaran, setKategoriPengeluaran] = useState('Lainnya');
   const [statusKas, setStatusKas] = useState(null);
   const [tanggalKas, setTanggalKas] = useState(''); // '' = hari ini, 'semua' = semua tanggal, else dd/MM/yyyy
   const [confirmDialog, setConfirmDialog] = useState(null); // {title, message, onConfirm}
@@ -262,12 +263,12 @@ export default function Home() {
     if (loadingPengeluaran) return; // cegah double-submit (klik dobel/cepat)
     if (!ketPengeluaran.trim() || !nominalPengeluaran) { alert('Isi keterangan dan nominal dulu'); return; }
     setLoadingPengeluaran(true);
-    const res = await fetch('/api/kas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keterangan: ketPengeluaran, nominal: onlyDigits(nominalPengeluaran) }) }).then(r => r.json());
+    const res = await fetch('/api/kas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keterangan: ketPengeluaran, nominal: onlyDigits(nominalPengeluaran), kategori: kategoriPengeluaran }) }).then(r => r.json());
     setLoadingPengeluaran(false);
     if (cekSessionExpired(res)) return;
     setStatusKas(res);
     if (res.sukses) {
-      setKetPengeluaran(''); setNominalPengeluaran('');
+      setKetPengeluaran(''); setNominalPengeluaran(''); setKategoriPengeluaran('Lainnya');
       loadKas();
     }
   }
@@ -505,6 +506,7 @@ export default function Home() {
 
     tanggalKas, setTanggalKas, kas, loadingKas, loadKas,
     ketPengeluaran, setKetPengeluaran, nominalPengeluaran, setNominalPengeluaran,
+    kategoriPengeluaran, setKategoriPengeluaran,
     loadingPengeluaran, tambahPengeluaran, statusKas,
 
     tanggalLog, setTanggalLog, logData, loadingLog, loadLog,

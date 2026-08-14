@@ -1,23 +1,24 @@
 'use client';
 import { Icon } from '@/lib/icons';
-import { rp, rpSigned, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy } from '@/lib/format';
+import { rp, rpSigned, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy, KATEGORI_PENGELUARAN } from '@/lib/format';
 
 export function KasTab({ p }) {
   const {
     tanggalKas, setTanggalKas, kas, loadingKas, loadKas,
     role, ketPengeluaran, setKetPengeluaran, nominalPengeluaran, setNominalPengeluaran,
+    kategoriPengeluaran, setKategoriPengeluaran,
     loadingPengeluaran, tambahPengeluaran, statusKas,
   } = p;
 
   return (
     <div className="bayar-grid">
-      <div className="panel">
+      <div className="panel panel-print">
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : 'Kas Hari Ini'}</div>
             <div className="panel-desc">{kas ? kas.tanggal : '—'}</div>
           </div>
-          <div className="toolbar">
+          <div className="toolbar no-print">
             <input
               type="date"
               value={tanggalKas && tanggalKas !== 'semua' ? ddmmyyyyToIso(tanggalKas) : ''}
@@ -27,12 +28,39 @@ export function KasTab({ p }) {
               <Icon name="list" size={14} /> {tanggalKas === 'semua' ? 'Kembali ke Hari Ini' : 'Lihat Semua'}
             </button>
             <button className="secondary action-btn btn-icon" onClick={loadKas}><Icon name="refresh" size={14} /> Refresh</button>
+            <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
           </div>
         </div>
 
         {loadingKas && <div className="empty-state"><span className="spinner" />Memuat...</div>}
         {!loadingKas && kas && (
           <>
+            <div className="print-only print-kop">
+              <img src="/logo-mi.png" alt="Logo" className="print-kop-logo" />
+              <div>
+                <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+                <div className="print-kop-judul">Laporan Kas — {kas.tanggal}</div>
+                <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</div>
+              </div>
+            </div>
+
+            {kas.trend7hari && kas.trend7hari.length > 0 && (
+              <div className="no-print" style={{ marginBottom: 20 }}>
+                <div className="subsection-title">Trend Saldo 7 Hari Terakhir</div>
+                <div className="trend-sparkline">
+                  {(() => {
+                    const max = Math.max(1, ...kas.trend7hari.map(t => Math.abs(t.saldo)));
+                    return kas.trend7hari.map((t, i) => (
+                      <div key={i} className="trend-bar-col" title={`${t.tanggal}: ${rpSigned(t.saldo)}`}>
+                        <div className={`trend-bar ${t.saldo >= 0 ? 'in' : 'out'}`} style={{ height: `${Math.max(4, (Math.abs(t.saldo) / max) * 48)}px` }} />
+                        <div className="trend-bar-label">{t.tanggal}</div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
             <div className="stat-grid" style={{ marginBottom: 20 }}>
               <div className="stat-tile stat-tile-green">
                 <div className="stat-tile-icon"><Icon name="down" size={22} /></div>
@@ -87,6 +115,29 @@ export function KasTab({ p }) {
               </table>
             </div>
 
+            {kas.rekapPerKategori && kas.rekapPerKategori.length > 0 && (
+              <>
+                <div className="subsection-title">Rekap Pengeluaran per Kategori</div>
+                <div className="table-wrap" style={{ marginBottom: 20 }}>
+                  <table>
+                    <thead><tr><th>Kategori</th><th className="num">Jumlah Transaksi</th><th className="num">Total Rp</th></tr></thead>
+                    <tbody>
+                      {kas.rekapPerKategori.map((r, i) => (
+                        <tr key={i}><td>{r.kategori}</td><td className="num">{r.jumlah}</td><td className="num">{rp(r.total)}</td></tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td style={{ fontWeight: 700 }}>Total</td>
+                        <td className="num" style={{ fontWeight: 700 }}>{kas.rekapPerKategori.reduce((s, r) => s + r.jumlah, 0)}</td>
+                        <td className="num" style={{ fontWeight: 700 }}>{rp(kas.keluar)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
+            )}
+
             <details className="collapsible" style={{ marginBottom: 12 }}>
               <summary>Detail Transaksi Masuk ({kas.transaksiMasuk.length})</summary>
               <div className="table-wrap">
@@ -106,11 +157,11 @@ export function KasTab({ p }) {
               <summary>Detail Pengeluaran ({kas.transaksiKeluar.length})</summary>
               <div className="table-wrap">
                 <table>
-                  <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Keterangan</th><th>Dicatat</th><th className="num">Rp</th></tr></thead>
+                  <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Keterangan</th><th>Kategori</th><th>Dicatat</th><th className="num">Rp</th></tr></thead>
                   <tbody>
-                    {kas.transaksiKeluar.length === 0 && <tr><td colSpan={kas.semua ? 4 : 3} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada pengeluaran</td></tr>}
+                    {kas.transaksiKeluar.length === 0 && <tr><td colSpan={kas.semua ? 5 : 4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada pengeluaran</td></tr>}
                     {kas.transaksiKeluar.map((t, i) => (
-                      <tr key={i}>{kas.semua && <td>{t.tanggal}</td>}<td>{t.keterangan}</td><td>{t.user}</td><td className="num">{rp(t.nominal)}</td></tr>
+                      <tr key={i}>{kas.semua && <td>{t.tanggal}</td>}<td>{t.keterangan}</td><td>{t.kategori}</td><td>{t.user}</td><td className="num">{rp(t.nominal)}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -121,12 +172,17 @@ export function KasTab({ p }) {
       </div>
 
       {role === 'admin' && (
-        <div className="panel">
+        <div className="panel no-print">
           <div className="panel-title"><span className="ic-badge"><Icon name="minus" size={14} /></span> Catat Pengeluaran</div>
           <div className="panel-desc">Tercatat otomatis tanggal hari ini</div>
 
           <label>Keterangan</label>
           <input value={ketPengeluaran} onChange={e => setKetPengeluaran(e.target.value)} placeholder="contoh: Beli ATK kantor" />
+
+          <label>Kategori</label>
+          <select value={kategoriPengeluaran} onChange={e => setKategoriPengeluaran(e.target.value)}>
+            {KATEGORI_PENGELUARAN.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
 
           <label>Nominal</label>
           <input type="text" inputMode="numeric" value={nominalPengeluaran} onChange={e => setNominalPengeluaran(formatRibuan(e.target.value))} placeholder="contoh: 150.000" />
