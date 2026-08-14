@@ -32,18 +32,10 @@ export function BayarTab({ p }) {
         </select>
 
         <label>Nama Siswa</label>
-        <div className="search-box">
-          <span className="search-ic"><Icon name="search" size={15} /></span>
-          <input
-            list="daftar-siswa-bayar"
-            value={siswa}
-            onChange={e => setSiswa(e.target.value)}
-            placeholder="ketik nama siswa..."
-          />
-        </div>
-        <datalist id="daftar-siswa-bayar">
-          {siswaList.map(s => <option key={s} value={s} />)}
-        </datalist>
+        <select value={siswa} onChange={e => setSiswa(e.target.value)}>
+          {siswaList.length === 0 && <option value="">Belum ada siswa di kelas ini</option>}
+          {siswaList.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
 
         <hr className="field-divider" />
 
