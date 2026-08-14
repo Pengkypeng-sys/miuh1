@@ -14,9 +14,7 @@ export async function POST(req) {
   }
   try {
     const tanggalExpiry = await getLicenseExpiry();
-    // ponytail: debug sementara — liat env apa yang kebaca prod, hapus abis ketauan masalahnya
-    const debugUrl = (process.env.SUPABASE_URL || 'KOSONG').slice(0, 30);
-    return NextResponse.json({ sukses: true, tanggalExpiry, debugUrl });
+    return NextResponse.json({ sukses: true, tanggalExpiry });
   } catch (e) {
     console.error('POST /api/dev/license gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data lisensi: ' + e.message });
