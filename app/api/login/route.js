@@ -21,10 +21,12 @@ export async function POST(req) {
     return NextResponse.json({ sukses: false, pesan: 'Isi username dan password' });
   }
 
+  const ua = req.headers.get('user-agent') || '';
+
   if (DEMO_MODE) {
     const u = DEMO_USERS[username];
     if (!u || u.password !== password) return NextResponse.json({ sukses: false, pesan: 'Username atau password salah' });
-    const token = signSession({ username, nama: u.nama, role: u.role });
+    const token = signSession({ username, nama: u.nama, role: u.role, ua });
     await setSessionCookie(token);
     return NextResponse.json({ sukses: true, nama: u.nama, role: u.role, lisensi });
   }
@@ -39,7 +41,7 @@ export async function POST(req) {
 
     const nama = row.nama || username;
     const role = row.role || 'staf';
-    const token = signSession({ username, nama, role });
+    const token = signSession({ username, nama, role, ua });
     await setSessionCookie(token);
 
     return NextResponse.json({ sukses: true, nama, role, lisensi });

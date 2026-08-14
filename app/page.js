@@ -33,6 +33,7 @@ export default function Home() {
   const [lisensiPesan, setLisensiPesan] = useState('');
   const [lisensiPeringatan, setLisensiPeringatan] = useState(null);
   const [lisensiInfo, setLisensiInfo] = useState(null);
+  const [loginInfo, setLoginInfo] = useState(null);
   const [tab, setTab] = useState('bayar');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -132,6 +133,7 @@ export default function Home() {
       if (res.sukses) {
         setNama(res.nama); setRole(res.role); setLoggedIn(true);
         setLisensiInfo(res.lisensi || null);
+        setLoginInfo(res.loginInfo || null);
         if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
       }
       setChecking(false);
@@ -195,6 +197,7 @@ export default function Home() {
     if (res.sukses) {
       setNama(res.nama); setRole(res.role); setLoggedIn(true); setLoginMsg(null);
       setLisensiInfo(res.lisensi || null);
+      setLoginInfo({ waktu: Date.now(), ua: navigator.userAgent });
       if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
     } else {
       setLoginMsg(res.pesan);
@@ -491,7 +494,7 @@ export default function Home() {
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
   const p = {
-    nama, role,
+    nama, role, loginInfo,
     kelas, setKelas, kelasList, siswa, setSiswa, siswaList,
     ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,

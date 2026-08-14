@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { Icon } from '@/lib/icons';
+import { parseUaSingkat } from '@/lib/format';
 
 export function AkunTab({ p }) {
-  const { nama, role } = p;
+  const { nama, role, loginInfo } = p;
   const [passwordLama, setPasswordLama] = useState('');
   const [passwordBaru, setPasswordBaru] = useState('');
   const [passwordKonfirmasi, setPasswordKonfirmasi] = useState('');
@@ -42,6 +43,16 @@ export function AkunTab({ p }) {
         </button>
         {status && <div className={`status ${status.sukses ? 'sukses' : 'gagal'}`}>{status.pesan}</div>}
       </div>
+
+      {loginInfo && (
+        <div className="panel" style={{ gridColumn: '1 / -1', maxWidth: 420 }}>
+          <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Login Saat Ini</div>
+          <div className="panel-desc">
+            {new Date(loginInfo.waktu).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+            <br />{parseUaSingkat(loginInfo.ua)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

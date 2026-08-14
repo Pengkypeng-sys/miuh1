@@ -2,19 +2,31 @@
 import { Icon } from '@/lib/icons';
 
 export function KenaikanTab({ p }) {
-  const { kenaikanKelas, loadingKenaikan, statusKenaikan } = p;
+  const { kenaikanKelas, loadingKenaikan, statusKenaikan, rekap } = p;
 
   const alur = ['KELAS 1', 'KELAS 2', 'KELAS 3', 'KELAS 4', 'KELAS 5', 'KELAS 6', 'ALUMNI'];
+  const jumlahPerKelas = Object.fromEntries((rekap?.perKelas || []).map(k => [k.kelas, k.totalSiswa]));
+  const totalSiswaAktif = (rekap?.perKelas || []).reduce((s, k) => s + k.totalSiswa, 0);
 
   return (
     <div className="panel">
       <div className="panel-title"><span className="ic-badge"><Icon name="trendingUp" size={14} /></span> Kenaikan Kelas Tahunan</div>
       <div className="panel-desc">Jalankan sekali tiap tahun ajaran baru — pindahin seluruh siswa naik 1 tingkat sekaligus</div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, margin: '18px 0 22px' }}>
+      <div className="hint-text" style={{ fontSize: 12.5, margin: '14px 0 4px' }}>
+        Total {totalSiswaAktif} siswa aktif bakal ikut naik kelas:
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, margin: '10px 0 22px' }}>
         {alur.map((k, i) => (
           <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="status-chip" style={{ background: 'var(--primary-light)', color: 'var(--primary)', minWidth: 'auto', padding: '4px 10px', fontSize: 12 }}>{k}</span>
+            <span className="status-chip" style={{ background: 'var(--primary-light)', color: 'var(--primary)', minWidth: 'auto', padding: '4px 10px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {k}
+              {jumlahPerKelas[k] != null && (
+                <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: 999, fontSize: 10.5, fontWeight: 700, padding: '1px 6px' }}>
+                  {jumlahPerKelas[k]}
+                </span>
+              )}
+            </span>
             {i < alur.length - 1 && <Icon name="down" size={13} className="hint-text" style={{ transform: 'rotate(-90deg)', color: 'var(--muted)' }} />}
           </span>
         ))}

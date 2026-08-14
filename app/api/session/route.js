@@ -16,7 +16,7 @@ export async function GET() {
 
     const session = await getSession();
     if (!session) return NextResponse.json({ sukses: false });
-    return NextResponse.json({ sukses: true, nama: session.nama, role: session.role, lisensi });
+    return NextResponse.json({ sukses: true, nama: session.nama, role: session.role, lisensi, loginInfo: { waktu: session.iat * 1000, ua: session.ua || '' } });
   } catch (e) {
     // Endpoint ini dipanggil di SETIAP load halaman sebelum apa pun dirender — kalau gak ditangkep,
     // gangguan sesaat ke database bikin seluruh app gak bisa dibuka sama sekali.
