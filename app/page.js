@@ -242,7 +242,8 @@ export default function Home() {
     setLoadingKas(true);
     const q = tanggalKas ? `?tanggal=${encodeURIComponent(tanggalKas)}` : '';
     const data = await fetch(`/api/kas${q}`).then(r => r.json());
-    setKas(data);
+    if (cekSessionExpired(data)) { setLoadingKas(false); return; }
+    setKas(data.sukses === false ? null : data);
     setLoadingKas(false);
   }
 
