@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession, clearSessionCookie } from '@/lib/auth';
 import { statusLisensi } from '@/lib/license';
 import { DEMO_MODE } from '@/lib/demoData';
+import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,8 @@ export async function GET() {
     if (lisensi.expired) {
       await clearSessionCookie();
       const debugUrl = (process.env.SUPABASE_URL || 'KOSONG').slice(0, 30);
-      return NextResponse.json({ sukses: false, expired: true, pesan: `Masa aktif dashboard sudah habis (${lisensi.tanggalExpiry}). Hubungi admin buat perpanjang.`, debugUrl });
+      const debugRaw = await db().from('lisensi').select('*').eq('key', 'LICENSE_EXPIRY');
+      return NextResponse.json({ sukses: false, expired: true, pesan: `Masa aktif dashboard sudah habis (${lisensi.tanggalExpiry}). Hubungi admin buat perpanjang.`, debugUrl, debugRaw });
     }
 
     const session = await getSession();
