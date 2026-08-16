@@ -16,7 +16,11 @@ export function RekapTab({ p }) {
 
   const [cariPiutang, setCariPiutang] = useState('');
   const [hanya30, setHanya30] = useState(false);
-  const [itemDetailFilter, setItemDetailFilter] = useState('');
+  const [itemDetailFilter, setItemDetailFilter] = useState([]); // [] = semua item; array of kolom (string)
+  function toggleItemDetail(kolom) {
+    const k = String(kolom);
+    setItemDetailFilter(cur => cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k]);
+  }
 
   function downloadCsvSiswa(items) {
     const header = ['Nama Siswa', ...items.map(it => it.nama)].join(',') + '\n';
@@ -109,12 +113,23 @@ export function RekapTab({ p }) {
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
             {kelasDetail && (
-              <select className="no-print" style={{ width: 'auto', margin: 0 }} value={itemDetailFilter} onChange={e => setItemDetailFilter(e.target.value)}>
-                <option value="">Semua Item</option>
-                {kelasDetail.items.map(it => <option key={it.kolom} value={it.kolom}>{it.nama}</option>)}
-              </select>
+              <details className="no-print" style={{ position: 'relative' }}>
+                <summary className="secondary action-btn btn-icon" style={{ cursor: 'pointer', listStyle: 'none' }}>
+                  <Icon name="filter" size={14} /> {itemDetailFilter.length === 0 ? 'Semua Item' : `${itemDetailFilter.length} item dipilih`}
+                </summary>
+                <div style={{ position: 'absolute', zIndex: 10, top: '100%', left: 0, background: 'var(--card, #fff)', border: '1px solid var(--border, #ddd)', borderRadius: 8, padding: 10, marginTop: 4, minWidth: 180, boxShadow: '0 4px 12px rgba(0,0,0,.12)' }}>
+                  {kelasDetail.items.map(it => (
+                    <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0', whiteSpace: 'nowrap' }}>
+                      <input type="checkbox" checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} /> {it.nama}
+                    </label>
+                  ))}
+                  {itemDetailFilter.length > 0 && (
+                    <button className="secondary action-btn" style={{ marginTop: 6, fontSize: 12, padding: '3px 8px' }} onClick={() => setItemDetailFilter([])}>Reset</button>
+                  )}
+                </div>
+              </details>
             )}
-            {kelasDetail && <button className="secondary action-btn btn-icon no-print" onClick={() => downloadCsvSiswa(kelasDetail.items.filter(it => !itemDetailFilter || String(it.kolom) === itemDetailFilter))}><Icon name="list" size={14} /> Export Excel (CSV)</button>}
+            {kelasDetail && <button className="secondary action-btn btn-icon no-print" onClick={() => downloadCsvSiswa(kelasDetail.items.filter(it => itemDetailFilter.length === 0 || itemDetailFilter.includes(String(it.kolom))))}><Icon name="list" size={14} /> Export Excel (CSV)</button>}
             <button className="secondary action-btn btn-icon no-print" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
           </div>
         </div>
@@ -126,14 +141,14 @@ export function RekapTab({ p }) {
 
         {loadingDetail && <div className="empty-state"><span className="spinner" />Memuat...</div>}
         {!loadingDetail && kelasDetail && (() => {
-          const itemsShown = kelasDetail.items.filter(it => !itemDetailFilter || String(it.kolom) === itemDetailFilter);
+          const itemsShown = kelasDetail.items.filter(it => itemDetailFilter.length === 0 || itemDetailFilter.includes(String(it.kolom)));
           return (
           <div className="table-wrap">
             <div className="print-only print-kop">
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>
                 <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}{itemDetailFilter ? ` — ${itemsShown[0]?.nama || ''}` : ''}</div>
+                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}{itemDetailFilter.length > 0 ? ` — ${itemsShown.map(it => it.nama).join(', ')}` : ''}</div>
                 <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
