@@ -117,14 +117,15 @@ export function RekapTab({ p }) {
                 <summary className="secondary action-btn btn-icon" style={{ cursor: 'pointer', listStyle: 'none' }}>
                   <Icon name="filter" size={14} /> {itemDetailFilter.length === 0 ? 'Semua Item' : `${itemDetailFilter.length} item dipilih`}
                 </summary>
-                <div style={{ position: 'absolute', zIndex: 10, top: '100%', left: 0, background: 'var(--card, #fff)', border: '1px solid var(--border, #ddd)', borderRadius: 8, padding: 10, marginTop: 4, minWidth: 180, boxShadow: '0 4px 12px rgba(0,0,0,.12)' }}>
+                <div style={{ position: 'absolute', zIndex: 10, top: '100%', left: 0, background: 'var(--card, #fff)', border: '1px solid var(--border, #ddd)', borderRadius: 8, padding: 10, marginTop: 4, minWidth: 200, maxHeight: 280, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,.12)' }}>
                   {kelasDetail.items.map(it => (
-                    <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0', whiteSpace: 'nowrap' }}>
-                      <input type="checkbox" checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} /> {it.nama}
+                    <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 400, padding: '5px 2px', margin: 0, whiteSpace: 'nowrap' }}>
+                      <input type="checkbox" style={{ flexShrink: 0 }} checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} />
+                      <span>{it.nama}</span>
                     </label>
                   ))}
                   {itemDetailFilter.length > 0 && (
-                    <button className="secondary action-btn" style={{ marginTop: 6, fontSize: 12, padding: '3px 8px' }} onClick={() => setItemDetailFilter([])}>Reset</button>
+                    <button className="secondary action-btn" style={{ marginTop: 6, fontSize: 12, padding: '3px 8px', width: '100%' }} onClick={() => setItemDetailFilter([])}>Reset</button>
                   )}
                 </div>
               </details>
