@@ -131,7 +131,7 @@ export function BayarTab({ p }) {
                 />
                 <label className="mode-toggle" style={{ width: '100%' }}>
                   <input type="checkbox" checked={tabunganOn} onChange={e => { setTabunganOn(e.target.checked); if (!e.target.checked) setTabunganNominal(''); }} />
-                  Sertakan Tabungan Wajib
+                  Sertakan Tabungan Wajib <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(dicatat terpisah, laporan sendiri)</span>
                 </label>
                 {tabunganOn && (
                   <input
@@ -146,7 +146,7 @@ export function BayarTab({ p }) {
           </div>
 
           <div className="checkout-grid">
-          {itemList.filter(i => !i.nama.startsWith('PPDB') && !i.nama.startsWith('BUKU') && i.nama !== 'SPP').map(i => {
+          {itemList.filter(i => !i.nama.startsWith('PPDB') && !i.nama.startsWith('BUKU') && i.nama !== 'SPP' && i.nama !== 'TABUNGAN WAJIB').map(i => {
             const checked = checkedItems.has(i.kolom);
             const val = Number(itemValues[i.kolom]) || 0;
             const status = hitungStatus(val, i.target);

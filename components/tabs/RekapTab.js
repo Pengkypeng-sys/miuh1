@@ -17,6 +17,7 @@ export function RekapTab({ p }) {
   const [cariPiutang, setCariPiutang] = useState('');
   const [hanya30, setHanya30] = useState(false);
   const [itemDetailFilter, setItemDetailFilter] = useState([]); // [] = semua item; array of kolom (string)
+  const [showItemFilter, setShowItemFilter] = useState(false);
   function toggleItemDetail(kolom) {
     const k = String(kolom);
     setItemDetailFilter(cur => cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k]);
@@ -32,7 +33,8 @@ export function RekapTab({ p }) {
     a.click();
     URL.revokeObjectURL(url);
   }
-  const totalTerkumpul = rekap ? rekap.perItem.reduce((s, i) => s + i.nominal, 0) : 0;
+  const itemTabungan = rekap?.perItem.find(i => i.nama === 'TABUNGAN WAJIB');
+  const totalTerkumpul = rekap ? rekap.perItem.filter(i => i.nama !== 'TABUNGAN WAJIB').reduce((s, i) => s + i.nominal, 0) : 0;
   const totalSiswaSemua = rekap ? rekap.perKelas.reduce((s, k) => s + k.totalSiswa, 0) : 0;
   const rataPersenLunas = rekap && rekap.perKelas.length
     ? Math.round(rekap.perKelas.reduce((s, k) => s + k.persenLunas, 0) / rekap.perKelas.length)
@@ -102,7 +104,34 @@ export function RekapTab({ p }) {
         ))}
       </div>
 
-      <div className="panel">
+      {itemTabungan && (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> Tabungan Wajib</div>
+              <div className="panel-desc">Laporan terpisah — gak digabung ke SPP/rekap pembayaran lain</div>
+            </div>
+            <button
+              className="secondary action-btn btn-icon no-print"
+              onClick={() => { setItemDetailFilter([String(itemTabungan.kolom)]); setShowItemFilter(false); document.getElementById('panel-data-siswa')?.scrollIntoView({ behavior: 'smooth' }); }}
+            >
+              <Icon name="list" size={14} /> Lihat per Siswa
+            </button>
+          </div>
+          <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            <div className="stat-tile stat-tile-green">
+              <div className="stat-tile-icon"><Icon name="money" size={22} /></div>
+              <div><div className="label">Total Terkumpul</div><div className="value value-money">{rp(itemTabungan.nominal)}</div></div>
+            </div>
+            <div className="stat-tile stat-tile-amber">
+              <div className="stat-tile-icon"><Icon name="students" size={22} /></div>
+              <div><div className="label">Siswa Terisi</div><div className="value">{itemTabungan.terisi}</div></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="panel" id="panel-data-siswa">
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Data Siswa per Kelas</div>
@@ -113,27 +142,31 @@ export function RekapTab({ p }) {
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
             {kelasDetail && (
-              <details className="no-print" style={{ position: 'relative' }}>
-                <summary className="secondary action-btn btn-icon" style={{ cursor: 'pointer', listStyle: 'none' }}>
-                  <Icon name="filter" size={14} /> {itemDetailFilter.length === 0 ? 'Semua Item' : `${itemDetailFilter.length} item dipilih`}
-                </summary>
-                <div style={{ position: 'absolute', zIndex: 10, top: '100%', left: 0, background: 'var(--card, #fff)', border: '1px solid var(--border, #ddd)', borderRadius: 8, padding: 10, marginTop: 4, minWidth: 200, maxHeight: 280, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,.12)' }}>
-                  {kelasDetail.items.map(it => (
-                    <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 400, padding: '5px 2px', margin: 0, whiteSpace: 'nowrap' }}>
-                      <input type="checkbox" style={{ flexShrink: 0 }} checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} />
-                      <span>{it.nama}</span>
-                    </label>
-                  ))}
-                  {itemDetailFilter.length > 0 && (
-                    <button className="secondary action-btn" style={{ marginTop: 6, fontSize: 12, padding: '3px 8px', width: '100%' }} onClick={() => setItemDetailFilter([])}>Reset</button>
-                  )}
-                </div>
-              </details>
+              <button
+                className="secondary action-btn btn-icon"
+                onClick={() => setShowItemFilter(v => !v)}
+              >
+                <Icon name="filter" size={14} /> {itemDetailFilter.length === 0 ? 'Semua Item' : `${itemDetailFilter.length} item dipilih`}
+              </button>
             )}
             {kelasDetail && <button className="secondary action-btn btn-icon no-print" onClick={() => downloadCsvSiswa(kelasDetail.items.filter(it => itemDetailFilter.length === 0 || itemDetailFilter.includes(String(it.kolom))))}><Icon name="list" size={14} /> Export Excel (CSV)</button>}
             <button className="secondary action-btn btn-icon no-print" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
           </div>
         </div>
+
+        {kelasDetail && showItemFilter && (
+          <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', padding: '10px 12px', marginBottom: 12, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)', borderRadius: 8 }}>
+            {kelasDetail.items.map(it => (
+              <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, margin: 0 }}>
+                <input type="checkbox" checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} />
+                <span>{it.nama}</span>
+              </label>
+            ))}
+            {itemDetailFilter.length > 0 && (
+              <button className="secondary action-btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => setItemDetailFilter([])}>Reset</button>
+            )}
+          </div>
+        )}
 
         <div className="search-box no-print" style={{ marginBottom: 12, maxWidth: 320 }}>
           <span className="search-ic"><Icon name="search" size={15} /></span>
@@ -211,7 +244,7 @@ export function RekapTab({ p }) {
           <div className="table-wrap">
             <table><thead><tr><th>Item</th><th className="num">Terisi</th><th className="num">Total Rp</th></tr></thead>
               <tbody>
-                {rekap?.perItem.map(i => (
+                {rekap?.perItem.filter(i => i.nama !== 'TABUNGAN WAJIB').map(i => (
                   <Fragment key={i.kolom}>
                     <tr>
                       <td>

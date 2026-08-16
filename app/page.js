@@ -291,14 +291,27 @@ export default function Home() {
     }
     if (sppOn && onlyDigits(sppNominal)) {
       const item = itemList.find(i => i.nama === 'SPP');
-      const total = (Number(onlyDigits(sppNominal)) || 0) + (tabunganOn ? (Number(onlyDigits(tabunganNominal)) || 0) : 0);
+      const total = Number(onlyDigits(sppNominal)) || 0;
       const keterangan = sppBulan.length ? `Bulan ${sppBulan.join(', ')}` : undefined;
       if (item && total) daftarBayar.push({ kolom: item.kolom, nominal: String(total), mode: 'tambah', keterangan });
     }
 
-    if (daftarBayar.length === 0) { alert('Centang minimal 1 item dan isi nominalnya'); return; }
+    if (daftarBayar.length === 0 && !(tabunganOn && onlyDigits(tabunganNominal))) { alert('Centang minimal 1 item dan isi nominalnya'); return; }
 
     setLoadingBtn(true);
+
+    // Tabungan Wajib disimpan sebagai item sendiri (laporan terpisah dari SPP) — auto-bikin itemnya kalau belum ada
+    if (tabunganOn && onlyDigits(tabunganNominal)) {
+      let itemTabungan = itemList.find(i => i.nama === 'TABUNGAN WAJIB');
+      if (!itemTabungan) {
+        await fetch('/api/item', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nama: 'TABUNGAN WAJIB', target: 0, icon: 'wallet', kategori: 'Lainnya' }) }).then(r => r.json());
+        const listBaru = await fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json());
+        setItemList(listBaru);
+        itemTabungan = listBaru.find(i => i.nama === 'TABUNGAN WAJIB');
+      }
+      if (itemTabungan) daftarBayar.push({ kolom: itemTabungan.kolom, nominal: onlyDigits(tabunganNominal), mode: 'tambah' });
+    }
+
     const hasil = [];
     for (const { kolom: k, nominal, mode, keterangan } of daftarBayar) {
       const res = await fetch('/api/payment', {

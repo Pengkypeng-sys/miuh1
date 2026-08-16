@@ -41,7 +41,7 @@ export async function POST(req) {
   if (DEMO_MODE) return NextResponse.json({ sukses: true, pesan: `Jenis pembayaran "${namaFinal}" ditambahkan (demo, gak tersimpan)` });
 
   try {
-    const existing = throwIfError(await db().from('item_pembayaran').select('id').order('urutan', { ascending: false }).limit(1));
+    const existing = throwIfError(await db().from('item_pembayaran').select('urutan').order('urutan', { ascending: false }).limit(1));
     const urutan = existing.length ? existing[0].urutan + 1 : 0;
 
     const { error } = await db().from('item_pembayaran').insert({
