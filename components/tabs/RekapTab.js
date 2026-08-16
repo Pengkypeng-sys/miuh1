@@ -155,15 +155,17 @@ export function RekapTab({ p }) {
         </div>
 
         {kelasDetail && showItemFilter && (
-          <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', padding: '10px 12px', marginBottom: 12, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)', borderRadius: 8 }}>
-            {kelasDetail.items.map(it => (
-              <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, margin: 0 }}>
-                <input type="checkbox" checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} />
-                <span>{it.nama}</span>
-              </label>
-            ))}
+          <div className="no-print" style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)', borderRadius: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '4px 8px' }}>
+              {kelasDetail.items.map(it => (
+                <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <input type="checkbox" style={{ flexShrink: 0 }} checked={itemDetailFilter.includes(String(it.kolom))} onChange={() => toggleItemDetail(it.kolom)} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.nama}</span>
+                </label>
+              ))}
+            </div>
             {itemDetailFilter.length > 0 && (
-              <button className="secondary action-btn" style={{ fontSize: 12, padding: '3px 10px' }} onClick={() => setItemDetailFilter([])}>Reset</button>
+              <button className="secondary action-btn" style={{ fontSize: 12, padding: '3px 10px', marginTop: 8 }} onClick={() => setItemDetailFilter([])}>Reset</button>
             )}
           </div>
         )}

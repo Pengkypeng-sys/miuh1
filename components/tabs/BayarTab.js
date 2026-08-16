@@ -32,10 +32,15 @@ export function BayarTab({ p }) {
         </select>
 
         <label>Nama Siswa</label>
-        <select value={siswa} onChange={e => setSiswa(e.target.value)}>
-          {siswaList.length === 0 && <option value="">Belum ada siswa di kelas ini</option>}
-          {siswaList.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <input
+          list="daftar-siswa-bayar"
+          value={siswa}
+          onChange={e => setSiswa(e.target.value)}
+          placeholder={siswaList.length === 0 ? 'Belum ada siswa di kelas ini' : 'ketik atau pilih nama siswa...'}
+        />
+        <datalist id="daftar-siswa-bayar">
+          {siswaList.map(s => <option key={s} value={s} />)}
+        </datalist>
 
         <hr className="field-divider" />
 
