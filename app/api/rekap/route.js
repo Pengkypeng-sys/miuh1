@@ -99,7 +99,9 @@ export async function GET(req) {
         perKelas[idx].totalSiswa++;
         const applicableItems = itemRows.filter(it => !it.kelas_scope || it.kelas_scope.includes(s.kelas));
         const pay = paymentsBySiswa[s.id] || {};
-        const semuaLunas = applicableItems.length > 0 && applicableItems.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');
+        // Tabungan Wajib sifatnya nabung sukarela, bukan kewajiban — jangan ikut nentuin status "Lunas"
+        const itemsWajib = applicableItems.filter(it => it.nama !== 'TABUNGAN WAJIB');
+        const semuaLunas = itemsWajib.length > 0 && itemsWajib.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');
         if (semuaLunas) perKelas[idx].lunasCount++;
 
         // piutang: total kurang bayar per siswa dari item yang belum lunas
