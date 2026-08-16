@@ -25,12 +25,12 @@ const DEMO_KAS = {
     { tanggal: '13/07', saldo: 550000 },
   ],
   rekapBulanan: [
-    { bulan: 'Mar 2026', masuk: 4200000, keluar: 900000, saldo: 3300000 },
-    { bulan: 'Apr 2026', masuk: 5100000, keluar: 1200000, saldo: 3900000 },
-    { bulan: 'Mei 2026', masuk: 3800000, keluar: 700000, saldo: 3100000 },
-    { bulan: 'Jun 2026', masuk: 4600000, keluar: 1000000, saldo: 3600000 },
-    { bulan: 'Jul 2026', masuk: 5300000, keluar: 1500000, saldo: 3800000 },
-    { bulan: 'Agu 2026', masuk: 850000, keluar: 300000, saldo: 550000 },
+    { bulan: 'Mar 2026', masuk: 4200000, keluar: 900000, saldo: 3300000, perKategori: [{ kategori: 'Operasional', total: 500000 }, { kategori: 'ATK', total: 400000 }] },
+    { bulan: 'Apr 2026', masuk: 5100000, keluar: 1200000, saldo: 3900000, perKategori: [{ kategori: 'Operasional', total: 700000 }, { kategori: 'Konsumsi', total: 500000 }] },
+    { bulan: 'Mei 2026', masuk: 3800000, keluar: 700000, saldo: 3100000, perKategori: [{ kategori: 'ATK', total: 400000 }, { kategori: 'Kebersihan', total: 300000 }] },
+    { bulan: 'Jun 2026', masuk: 4600000, keluar: 1000000, saldo: 3600000, perKategori: [{ kategori: 'Operasional', total: 600000 }, { kategori: 'ATK', total: 400000 }] },
+    { bulan: 'Jul 2026', masuk: 5300000, keluar: 1500000, saldo: 3800000, perKategori: [{ kategori: 'Operasional', total: 900000 }, { kategori: 'Konsumsi', total: 600000 }] },
+    { bulan: 'Agu 2026', masuk: 850000, keluar: 300000, saldo: 550000, perKategori: [{ kategori: 'ATK', total: 150000 }, { kategori: 'Konsumsi', total: 150000 }] },
   ],
 };
 DEMO_KAS.rekapPerItem = rekapPerItem(DEMO_KAS.transaksiMasuk);
@@ -94,7 +94,7 @@ const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep
 
 // Masuk/keluar/saldo per bulan, 6 bulan terakhir (termasuk bulan ini)
 function hitungRekapBulanan(logRows, pengeluaranRows) {
-  const perBulan = {}; // 'YYYY-MM' -> { masuk, keluar }
+  const perBulan = {}; // 'YYYY-MM' -> { masuk, keluar, perKategori }
   logRows.forEach(r => {
     if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
     const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
@@ -102,14 +102,17 @@ function hitungRekapBulanan(logRows, pengeluaranRows) {
     const { tanggal } = tanggalJakarta(new Date(r.waktu));
     const [dd, mm, yyyy] = tanggal.split('/');
     const key = `${yyyy}-${mm}`;
-    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0 };
+    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0, perKategori: {} };
     perBulan[key].masuk += delta;
   });
   pengeluaranRows.forEach(r => {
     if (!r.tanggal) return;
     const key = r.tanggal.slice(0, 7); // 'YYYY-MM-DD' -> 'YYYY-MM'
-    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0 };
-    perBulan[key].keluar += Number(r.nominal) || 0;
+    if (!perBulan[key]) perBulan[key] = { masuk: 0, keluar: 0, perKategori: {} };
+    const n = Number(r.nominal) || 0;
+    perBulan[key].keluar += n;
+    const kat = r.kategori || 'Lainnya';
+    perBulan[key].perKategori[kat] = (perBulan[key].perKategori[kat] || 0) + n;
   });
 
   const hasilList = [];
@@ -117,8 +120,11 @@ function hitungRekapBulanan(logRows, pengeluaranRows) {
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const { masuk = 0, keluar = 0 } = perBulan[key] || {};
-    hasilList.push({ bulan: `${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`, masuk, keluar, saldo: masuk - keluar });
+    const { masuk = 0, keluar = 0, perKategori = {} } = perBulan[key] || {};
+    hasilList.push({
+      bulan: `${NAMA_BULAN[d.getMonth()]} ${d.getFullYear()}`, masuk, keluar, saldo: masuk - keluar,
+      perKategori: Object.entries(perKategori).map(([kategori, total]) => ({ kategori, total })).sort((a, b) => b.total - a.total),
+    });
   }
   return hasilList;
 }

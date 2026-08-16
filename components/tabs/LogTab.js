@@ -1,9 +1,15 @@
 'use client';
+import { useState } from 'react';
 import { Icon } from '@/lib/icons';
 import { rp, ddmmyyyyToIso, isoToDdmmyyyy, AKSI_LABEL } from '@/lib/format';
 
 export function LogTab({ p }) {
   const { tanggalLog, setTanggalLog, logData, loadingLog, loadLog } = p;
+  const [cariLog, setCariLog] = useState('');
+
+  const entriesFiltered = logData
+    ? logData.entries.filter(e => !cariLog || [e.user, e.kelas, e.siswa, e.item].some(v => (v || '').toLowerCase().includes(cariLog.toLowerCase())))
+    : [];
 
   return (
     <div className="panel">
@@ -25,6 +31,11 @@ export function LogTab({ p }) {
         </div>
       </div>
 
+      <div className="search-box" style={{ marginBottom: 12, maxWidth: 320 }}>
+        <span className="search-ic"><Icon name="search" size={15} /></span>
+        <input value={cariLog} onChange={e => setCariLog(e.target.value)} placeholder="cari user/kelas/siswa/item..." />
+      </div>
+
       {loadingLog && <div className="empty-state"><span className="spinner" />Memuat...</div>}
       {!loadingLog && logData && (
         <>
@@ -33,8 +44,8 @@ export function LogTab({ p }) {
             <table>
               <thead><tr><th>Jam</th><th>Aksi</th><th>User</th><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Lama → Baru</th><th>Metode</th></tr></thead>
               <tbody>
-                {logData.entries.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada aktivitas</td></tr>}
-                {logData.entries.map((e, i) => {
+                {entriesFiltered.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)' }}>{cariLog ? 'Tidak ada yang cocok' : 'Belum ada aktivitas'}</td></tr>}
+                {entriesFiltered.map((e, i) => {
                   const meta = AKSI_LABEL[e.aksi] || { label: e.aksi, color: 'belum' };
                   const [tgl, jam] = e.waktu.split(' ');
                   return (

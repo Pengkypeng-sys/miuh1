@@ -15,6 +15,19 @@ export function RekapTab({ p }) {
   } = p;
 
   const [cariPiutang, setCariPiutang] = useState('');
+  const [hanya30, setHanya30] = useState(false);
+  const [itemDetailFilter, setItemDetailFilter] = useState('');
+
+  function downloadCsvSiswa(items) {
+    const header = ['Nama Siswa', ...items.map(it => it.nama)].join(',') + '\n';
+    const rows = kelasDetail.siswa.map(s => [s.nama, ...items.map(it => Number(s.values[it.kolom]) || 0)].join(',')).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `data-siswa-${kelasDetailPilih}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   const totalTerkumpul = rekap ? rekap.perItem.reduce((s, i) => s + i.nominal, 0) : 0;
   const totalSiswaSemua = rekap ? rekap.perKelas.reduce((s, k) => s + k.totalSiswa, 0) : 0;
   const rataPersenLunas = rekap && rekap.perKelas.length
@@ -91,10 +104,17 @@ export function RekapTab({ p }) {
             <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Data Siswa per Kelas</div>
             <div className="panel-desc">Status pembayaran tiap siswa, per item</div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
+            {kelasDetail && (
+              <select className="no-print" style={{ width: 'auto', margin: 0 }} value={itemDetailFilter} onChange={e => setItemDetailFilter(e.target.value)}>
+                <option value="">Semua Item</option>
+                {kelasDetail.items.map(it => <option key={it.kolom} value={it.kolom}>{it.nama}</option>)}
+              </select>
+            )}
+            {kelasDetail && <button className="secondary action-btn btn-icon no-print" onClick={() => downloadCsvSiswa(kelasDetail.items.filter(it => !itemDetailFilter || String(it.kolom) === itemDetailFilter))}><Icon name="list" size={14} /> Export Excel (CSV)</button>}
             <button className="secondary action-btn btn-icon no-print" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
           </div>
         </div>
@@ -105,13 +125,15 @@ export function RekapTab({ p }) {
         </div>
 
         {loadingDetail && <div className="empty-state"><span className="spinner" />Memuat...</div>}
-        {!loadingDetail && kelasDetail && (
+        {!loadingDetail && kelasDetail && (() => {
+          const itemsShown = kelasDetail.items.filter(it => !itemDetailFilter || String(it.kolom) === itemDetailFilter);
+          return (
           <div className="table-wrap">
             <div className="print-only print-kop">
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>
                 <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}</div>
+                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}{itemDetailFilter ? ` — ${itemsShown[0]?.nama || ''}` : ''}</div>
                 <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
@@ -119,17 +141,17 @@ export function RekapTab({ p }) {
               <thead>
                 <tr>
                   <th>Nama Siswa</th>
-                  {kelasDetail.items.map(it => <th key={it.kolom}>{it.nama}</th>)}
+                  {itemsShown.map(it => <th key={it.kolom}>{it.nama}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).length === 0 && (
-                  <tr><td colSpan={kelasDetail.items.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
+                  <tr><td colSpan={itemsShown.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
                 )}
                 {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).map(s => (
                   <tr key={s.nama}>
                     <td>{s.nama}</td>
-                    {kelasDetail.items.map(it => {
+                    {itemsShown.map(it => {
                       const val = Number(s.values[it.kolom]) || 0;
                       const ket = s.keterangan?.[it.kolom];
                       const target = targetSebenarnya(it.nama, ket, it.target);
@@ -154,7 +176,8 @@ export function RekapTab({ p }) {
               </tbody>
             </table>
           </div>
-        )}
+          );
+        })()}
       </div>
 
       <div className="two-col-panels">
@@ -246,15 +269,18 @@ export function RekapTab({ p }) {
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
             <input style={{ width: 'auto' }} placeholder="cari nama siswa..." value={cariPiutang} onChange={e => setCariPiutang(e.target.value)} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={hanya30} onChange={e => setHanya30(e.target.checked)} /> {'>'}30 hari
+            </label>
           </div>
         </div>
         <div className="table-wrap">
           <table><thead><tr><th>Siswa</th><th>Kelas</th><th>Kurang di Item</th><th className="num">Total Kurang</th></tr></thead>
             <tbody>
               {rekap && rekap.piutang.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Semua siswa udah lunas</td></tr>}
-              {rekap?.piutang.filter(pi => pi.siswa.toLowerCase().includes(cariPiutang.toLowerCase())).map((pi, i) => (
+              {rekap?.piutang.filter(pi => pi.siswa.toLowerCase().includes(cariPiutang.toLowerCase()) && (!hanya30 || pi.lewat30)).map((pi, i) => (
                 <tr key={i}>
-                  <td>{pi.siswa}</td>
+                  <td>{pi.siswa} {pi.lewat30 && <span className="status-chip belum" title="Terdaftar >30 hari, masih ada piutang">{'>'}30 hari</span>}</td>
                   <td>{pi.kelas}</td>
                   <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{pi.items.map(it => it.nama).join(', ')}</td>
                   <td className="num" style={{ fontWeight: 700 }}>{rp(pi.kurang)}</td>

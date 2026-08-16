@@ -47,7 +47,7 @@ export async function GET(req) {
 
     const [itemRows, siswaRows, logRows] = await Promise.all([
       db().from('item_pembayaran').select('*').order('urutan').then(r => throwIfError(r)),
-      db().from('siswa').select('id, nama, kelas').in('kelas', kelasList).then(r => throwIfError(r)),
+      db().from('siswa').select('id, nama, kelas, created_at').in('kelas', kelasList).then(r => throwIfError(r)),
       db().from('log_aktivitas').select('waktu, aksi, lama, baru').then(r => throwIfError(r)),
     ]);
 
@@ -115,7 +115,10 @@ export async function GET(req) {
           kurangTotal += kurang;
           itemKurang.push({ nama: it.nama, kurang });
         });
-        if (kurangTotal > 0) piutang.push({ kelas: s.kelas, siswa: s.nama, kurang: kurangTotal, items: itemKurang });
+        if (kurangTotal > 0) {
+          const hariSejakDaftar = s.created_at ? Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000) : 0;
+          piutang.push({ kelas: s.kelas, siswa: s.nama, kurang: kurangTotal, items: itemKurang, lewat30: hariSejakDaftar > 30 });
+        }
       });
     }
 

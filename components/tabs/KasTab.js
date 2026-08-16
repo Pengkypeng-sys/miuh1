@@ -1,6 +1,6 @@
 'use client';
 import { Icon } from '@/lib/icons';
-import { rp, rpSigned, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy, KATEGORI_PENGELUARAN } from '@/lib/format';
+import { rp, rpSigned, rpSingkat, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy, KATEGORI_PENGELUARAN } from '@/lib/format';
 
 export function KasTab({ p }) {
   const {
@@ -224,7 +224,19 @@ export function KasTab({ p }) {
               <thead><tr><th>Bulan</th><th className="num">Uang Masuk</th><th className="num">Uang Keluar</th><th className="num">Saldo</th></tr></thead>
               <tbody>
                 {kas.rekapBulanan.map((b, i) => (
-                  <tr key={i}><td>{b.bulan}</td><td className="num">{rp(b.masuk)}</td><td className="num">{rp(b.keluar)}</td><td className="num" style={{ fontWeight: 700 }}>{rpSigned(b.saldo)}</td></tr>
+                  <tr key={i}>
+                    <td>{b.bulan}</td>
+                    <td className="num">{rp(b.masuk)}</td>
+                    <td className="num" title={b.perKategori?.map(k => `${k.kategori}: ${rp(k.total)}`).join(' • ') || ''}>
+                      {rp(b.keluar)}
+                      {b.perKategori?.length > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
+                          {b.perKategori.map(k => `${k.kategori} ${rpSingkat(k.total)}`).join(', ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="num" style={{ fontWeight: 700 }}>{rpSigned(b.saldo)}</td>
+                  </tr>
                 ))}
               </tbody>
             </table>
