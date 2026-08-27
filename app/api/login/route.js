@@ -52,7 +52,7 @@ export async function POST(req) {
 
   try {
     const hashed = hashPassword(password);
-    const row = throwIfError(await db().from('users').select('nama, role, password_hash').eq('username', username).maybeSingle());
+    const row = throwIfError(await db().from('users').select('nama, role, kelas, password_hash').eq('username', username).maybeSingle());
 
     if (!row || row.password_hash !== hashed) {
       catatGagal(ip);
@@ -62,10 +62,11 @@ export async function POST(req) {
 
     const nama = row.nama || username;
     const role = row.role || 'staf';
-    const token = signSession({ username, nama, role, ua });
+    const kelas = row.kelas || null;
+    const token = signSession({ username, nama, role, kelas, ua });
     await setSessionCookie(token);
 
-    return NextResponse.json({ sukses: true, nama, role, lisensi });
+    return NextResponse.json({ sukses: true, nama, role, kelas, lisensi });
   } catch (e) {
     console.error('POST /api/login gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal login: ' + e.message });

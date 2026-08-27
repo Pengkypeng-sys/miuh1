@@ -29,6 +29,7 @@ export default function Home() {
   const [checking, setChecking] = useState(true);
   const [nama, setNama] = useState('');
   const [role, setRole] = useState('staf');
+  const [kelasGuru, setKelasGuru] = useState(null); // kelas terkunci buat role guru, null buat admin/staf
   const [lisensiExpired, setLisensiExpired] = useState(false);
   const [lisensiPesan, setLisensiPesan] = useState('');
   const [lisensiPeringatan, setLisensiPeringatan] = useState(null);
@@ -64,6 +65,7 @@ export default function Home() {
   const [tabunganNominal, setTabunganNominal] = useState('');
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
+  const [kwitansi, setKwitansi] = useState(null);
   const [loadingBtn, setLoadingBtn] = useState(false);
   const [itemValues, setItemValues] = useState({});
   const [loadingRingkasan, setLoadingRingkasan] = useState(false);
@@ -132,7 +134,7 @@ export default function Home() {
     fetch('/api/session').then(r => r.json()).then(res => {
       if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); setChecking(false); return; }
       if (res.sukses) {
-        setNama(res.nama); setRole(res.role); setLoggedIn(true);
+        setNama(res.nama); setRole(res.role); setKelasGuru(res.kelas || null); setLoggedIn(true);
         setLisensiInfo(res.lisensi || null);
         setLoginInfo(res.loginInfo || null);
         if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
@@ -145,10 +147,12 @@ export default function Home() {
   useEffect(() => {
     if (!loggedIn) return;
     fetch('/api/kelas').then(r => r.json()).then(list => {
-      setKelasList(list);
-      setKelas(list[0] || '');
-      setKelasSiswa(list[0] || '');
-      setKelasDetailPilih(list[0] || '');
+      // Guru dikunci ke kelasnya sendiri — dropdown kelas cuma nampilin 1 pilihan
+      const listAkhir = kelasGuru ? [kelasGuru] : list;
+      setKelasList(listAkhir);
+      setKelas(listAkhir[0] || '');
+      setKelasSiswa(listAkhir[0] || '');
+      setKelasDetailPilih(listAkhir[0] || '');
     });
     loadRekap();
   }, [loggedIn]);
@@ -196,7 +200,7 @@ export default function Home() {
     }
     if (res.expired) { setLisensiExpired(true); setLisensiPesan(res.pesan); return; }
     if (res.sukses) {
-      setNama(res.nama); setRole(res.role); setLoggedIn(true); setLoginMsg(null);
+      setNama(res.nama); setRole(res.role); setKelasGuru(res.kelas || null); setLoggedIn(true); setLoginMsg(null);
       setLisensiInfo(res.lisensi || null);
       setLoginInfo({ waktu: Date.now(), ua: navigator.userAgent });
       if (res.lisensi?.peringatan) setLisensiPeringatan(res.lisensi);
@@ -319,7 +323,7 @@ export default function Home() {
         body: JSON.stringify({ kelas, siswa, kolom: k, nominal, metode: metodeBayar, mode, keterangan }),
       }).then(r => r.json());
       if (cekSessionExpired(res)) { setLoadingBtn(false); return; }
-      hasil.push(res);
+      hasil.push({ ...res, nominalSetor: Number(nominal), mode });
       if (res.sukses) setItemValues(prev => ({ ...prev, [k]: res.total }));
     }
     setLoadingBtn(false);
@@ -332,6 +336,18 @@ export default function Home() {
         ? `Berhasil ${sukses.length} item via ${metodeBayar}: ${sukses.map(h => h.item).join(', ')}` + (gagal.length ? `. Gagal: ${gagal.map(g => g.pesan).join('; ')}` : '')
         : gagal.map(g => g.pesan).join('; '),
     });
+
+    // Kwitansi cuma buat setoran beneran (mode 'tambah'), bukan koreksi nilai ('set')
+    const itemBayar = sukses.filter(h => h.mode !== 'set');
+    if (itemBayar.length > 0) {
+      setKwitansi({
+        siswa, kelas, metode: metodeBayar, petugas: nama,
+        waktu: new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }),
+        items: itemBayar.map(h => ({ nama: h.item, nominal: h.nominalSetor })),
+        total: itemBayar.reduce((s, h) => s + h.nominalSetor, 0),
+      });
+    }
+
     setCheckedItems(new Set());
     setNominalPerItem({});
     setModePerItem({});
@@ -493,7 +509,9 @@ export default function Home() {
     );
   }
 
-  const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun'] : ['rekap', 'bayar', 'kas', 'akun'];
+  const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun']
+    : role === 'guru' ? ['rekap', 'bayar', 'akun']
+    : ['rekap', 'bayar', 'kas', 'akun'];
   const meta = TAB_META[tab];
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
@@ -504,7 +522,7 @@ export default function Home() {
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
-    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
 

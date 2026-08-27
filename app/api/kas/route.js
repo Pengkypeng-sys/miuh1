@@ -134,6 +134,7 @@ function hitungRekapBulanan(logRows, pengeluaranRows) {
 export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
+  if (session.role === 'guru') return NextResponse.json({ sukses: false, pesan: 'Guru gak punya akses ke Keuangan Harian' }, { status: 403 });
 
   if (DEMO_MODE) return NextResponse.json(DEMO_KAS);
 

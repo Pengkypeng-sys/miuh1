@@ -24,8 +24,8 @@ export function AkunTab({ p }) {
   }
 
   return (
-    <div className="bayar-grid">
-      <div className="panel" style={{ gridColumn: '1 / -1', maxWidth: 420 }}>
+    <div className="two-col-panels" style={{ gridTemplateColumns: '2fr 1fr' }}>
+      <div className="panel">
         <div className="panel-title"><span className="ic-badge"><Icon name="lock" size={14} /></span> Ganti Password</div>
         <div className="panel-desc">Login sebagai <b>{nama}</b> ({role})</div>
 
@@ -44,15 +44,29 @@ export function AkunTab({ p }) {
         {status && <div className={`status ${status.sukses ? 'sukses' : 'gagal'}`}>{status.pesan}</div>}
       </div>
 
-      {loginInfo && (
-        <div className="panel" style={{ gridColumn: '1 / -1', maxWidth: 420 }}>
-          <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Login Saat Ini</div>
-          <div className="panel-desc">
-            {new Date(loginInfo.waktu).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-            <br />{parseUaSingkat(loginInfo.ua)}
+      <div className="panel">
+        <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Login Saat Ini</div>
+        {loginInfo ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 12, borderRadius: 10, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)' }}>
+              <Icon name="clock" size={18} style={{ marginTop: 2, color: 'var(--muted)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 13.5 }}>{new Date(loginInfo.waktu).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Sesi Aktif</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 12, borderRadius: 10, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)' }}>
+              <Icon name="devices" size={18} style={{ marginTop: 2, color: 'var(--muted)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 13.5 }}>{parseUaSingkat(loginInfo.ua)}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Perangkat Utama</div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="panel-desc">Belum ada info sesi</div>
+        )}
+      </div>
     </div>
   );
 }

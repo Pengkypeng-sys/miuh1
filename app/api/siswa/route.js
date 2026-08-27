@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE, DEMO_SISWA } from '@/lib/demoData';
 
@@ -10,7 +10,7 @@ export async function GET(req) {
 
   const kelas = new URL(req.url).searchParams.get('kelas');
   if (DEMO_MODE) return NextResponse.json((DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id')));
-  if (!KELAS_LIST.includes(kelas)) return NextResponse.json([]);
+  if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json([]);
 
   try {
     const rows = throwIfError(await db().from('siswa').select('nama').eq('kelas', kelas));

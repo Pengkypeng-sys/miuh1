@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { DEMO_MODE } from '@/lib/demoData';
 
 // Ambil semua nilai item 1 siswa sekaligus (2 query total, bukan 1 query per item).
@@ -12,7 +12,7 @@ export async function GET(req) {
   const kelas = params.get('kelas'), siswa = params.get('siswa');
 
   if (DEMO_MODE) return NextResponse.json({});
-  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({});
+  if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json({});
 
   try {
     const siswaId = await findSiswaId(kelas, siswa);

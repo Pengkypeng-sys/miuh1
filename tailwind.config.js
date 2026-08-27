@@ -1,0 +1,40 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './app/**/*.{js,jsx}',
+    './components/**/*.{js,jsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: '#003527',
+        'primary-container': '#064e3b',
+        'on-primary-container': '#80bea6',
+        'primary-fixed': '#b0f0d6',
+        'primary-fixed-variant': '#0b513d',
+        secondary: '#006c49',
+        'secondary-container': '#6cf8bb',
+        surface: '#f8f9fa',
+        'surface-bright': '#f8f9fa',
+        'surface-dim': '#d9dadb',
+        'surface-container': '#edeeef',
+        'surface-container-low': '#f3f4f5',
+        'surface-container-lowest': '#ffffff',
+        'surface-container-high': '#e7e8e9',
+        'surface-container-highest': '#e1e3e4',
+        'on-surface': '#191c1d',
+        'on-surface-variant': '#404944',
+        outline: '#707974',
+        'outline-variant': '#bfc9c3',
+        error: '#ba1a1a',
+        'error-container': '#ffdad6',
+        gold: '#96650a',
+        'gold-container': '#fdf1d6',
+      },
+      spacing: { '4.5': '1.125rem', '5.5': '1.375rem' },
+      borderRadius: { xl: '0.75rem', '2xl': '1.25rem' },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+    },
+  },
+  plugins: [],
+};

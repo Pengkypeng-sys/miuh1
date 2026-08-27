@@ -39,7 +39,8 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_REKAP);
 
   const params = new URL(req.url).searchParams;
-  const kelasFilter = params.get('kelas'); // null = semua kelas
+  // Guru dikunci ke kelasnya sendiri, gak peduli query param yang dikirim
+  const kelasFilter = session.role === 'guru' ? session.kelas : params.get('kelas'); // null = semua kelas
   const tanggalBayar = params.get('tanggalBayar') || tanggalJakarta().tanggal;
 
   try {
@@ -133,7 +134,15 @@ export async function GET(req) {
 
     piutang.sort((a, b) => b.kurang - a.kurang);
 
-    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, trendBulanan: hitungTrenBulanan(logRows), kelasFilter: kelasFilter || null, tanggalBayar });
+    // Toleran kalau tabel riwayat_siswa belum dibuat (migrasi belum jalan) — jangan bikin rekap gagal total
+    let riwayatSiswa = [];
+    try {
+      riwayatSiswa = throwIfError(await db().from('riwayat_siswa').select('tahun, total_siswa, per_kelas').order('tahun'));
+    } catch (e) {
+      console.error('Gagal ambil riwayat_siswa (mungkin tabel belum dibuat):', e.message);
+    }
+
+    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, trendBulanan: hitungTrenBulanan(logRows), riwayatSiswa, kelasFilter: kelasFilter || null, tanggalBayar });
   } catch (e) {
     console.error('GET /api/rekap gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });

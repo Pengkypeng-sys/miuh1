@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { logAction } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
 import { hitungStatus } from '@/lib/target';
@@ -19,6 +19,7 @@ export async function POST(req) {
   let angka = Number(nominal);
   if (!Number.isFinite(angka) || angka < 0) return NextResponse.json({ sukses: false, pesan: 'Nominal gak valid' });
   if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
+  if (!kelasDiizinkan(session, kelas)) return NextResponse.json({ sukses: false, pesan: 'Gak bisa akses kelas ini' });
 
   try {
     const siswaId = await findSiswaId(kelas, siswa);

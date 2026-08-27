@@ -1,8 +1,18 @@
 'use client';
+import { useState } from 'react';
 import { Icon } from '@/lib/icons';
 
 export function KenaikanTab({ p }) {
   const { kenaikanKelas, loadingKenaikan, statusKenaikan, rekap } = p;
+  const [loadingBackup, setLoadingBackup] = useState(false);
+  const [statusBackup, setStatusBackup] = useState(null);
+
+  async function backupSekarang() {
+    setLoadingBackup(true);
+    const res = await fetch('/api/cron-backup', { method: 'POST' }).then(r => r.json());
+    setStatusBackup(res);
+    setLoadingBackup(false);
+  }
 
   const alur = ['KELAS 1', 'KELAS 2', 'KELAS 3', 'KELAS 4', 'KELAS 5', 'KELAS 6', 'ALUMNI'];
   const jumlahPerKelas = Object.fromEntries((rekap?.perKelas || []).map(k => [k.kelas, k.totalSiswa]));
@@ -47,6 +57,18 @@ export function KenaikanTab({ p }) {
           {statusKenaikan.ringkasan?.map((r, i) => <div key={i} style={{ fontSize: 12, marginTop: 4 }}>{r}</div>)}
         </div>
       )}
+
+      <hr className="field-divider" />
+
+      <div className="panel-title" style={{ marginBottom: 4 }}><span className="ic-badge"><Icon name="wallet" size={14} /></span> Backup Data</div>
+      <div className="hint-text" style={{ fontSize: 12.5, marginBottom: 14 }}>
+        Otomatis jalan tiap minggu (Minggu dini hari) — simpen data siswa, pembayaran, & pengeluaran ke Supabase Storage.
+        8 backup terakhir disimpen. Bisa juga dijalanin manual kapan aja.
+      </div>
+      <button className="secondary action-btn btn-icon" style={{ maxWidth: 260 }} disabled={loadingBackup} onClick={backupSekarang}>
+        {loadingBackup ? <span className="spinner" /> : <Icon name="save" size={14} />} Backup Sekarang
+      </button>
+      {statusBackup && <div className={`status ${statusBackup.sukses ? 'sukses' : 'gagal'}`}>{statusBackup.pesan}</div>}
     </div>
   );
 }

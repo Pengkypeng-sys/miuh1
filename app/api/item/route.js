@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { DEMO_MODE, DEMO_ITEMS } from '@/lib/demoData';
 
 // Catatan kompatibilitas: field `kolom` di response dulu artinya nomor kolom sheet,
@@ -14,7 +14,7 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json(DEMO_ITEMS);
 
   const kelas = new URL(req.url).searchParams.get('kelas');
-  if (!KELAS_LIST.includes(kelas)) return NextResponse.json([]);
+  if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json([]);
 
   try {
     const rows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));

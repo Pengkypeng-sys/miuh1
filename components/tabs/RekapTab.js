@@ -81,6 +81,28 @@ export function RekapTab({ p }) {
         </div>
       )}
 
+      {rekap?.riwayatSiswa?.length > 0 && (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Jumlah Siswa per Tahun Ajaran</div>
+              <div className="panel-desc">Snapshot diambil tiap kali Kenaikan Kelas dijalankan</div>
+            </div>
+          </div>
+          <div className="trend-sparkline" style={{ height: 90 }}>
+            {(() => {
+              const max = Math.max(1, ...rekap.riwayatSiswa.map(r => r.total_siswa));
+              return rekap.riwayatSiswa.map((r, i) => (
+                <div key={i} className="trend-bar-col" title={`${r.tahun}: ${r.total_siswa} siswa`}>
+                  <div className="trend-bar in" style={{ height: `${Math.max(4, (r.total_siswa / max) * 74)}px` }} />
+                  <div className="trend-bar-label">{r.tahun}</div>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+
       <div className="panel">
         <div className="panel-header">
           <div>

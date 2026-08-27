@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { DEMO_MODE, DEMO_SISWA, DEMO_ITEMS } from '@/lib/demoData';
 
 // Tabel siswa x item buat 1 kelas — 3 query total (item, siswa, pembayaran), bukan loop per siswa.
@@ -20,7 +20,7 @@ export async function GET(req) {
     return NextResponse.json({ items: DEMO_ITEMS, siswa });
   }
 
-  if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ items: [], siswa: [] });
+  if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json({ items: [], siswa: [] });
 
   try {
     const itemRows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));

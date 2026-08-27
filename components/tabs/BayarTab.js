@@ -15,7 +15,7 @@ export function BayarTab({ p }) {
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
-    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
   } = p;
@@ -203,6 +203,46 @@ export function BayarTab({ p }) {
         </button>
         {statusBayar && <div className={`status ${statusBayar.sukses ? 'sukses' : 'gagal'}`}>{statusBayar.pesan}</div>}
       </div>
+
+      {kwitansi && (
+        <div className="panel panel-print">
+          <div className="panel-header no-print">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
+              <div className="panel-desc">{kwitansi.siswa} — {kwitansi.kelas}</div>
+            </div>
+            <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
+          </div>
+
+          <div className="print-only print-kop">
+            <img src="/logo-mi.png" alt="" className="print-kop-logo" />
+            <div>
+              <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+              <div className="print-kop-judul">Kwitansi Pembayaran</div>
+              <div className="print-kop-tanggal">{kwitansi.waktu}</div>
+            </div>
+          </div>
+
+          <div style={{ padding: '4px 2px 12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
+          </div>
+
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
+              <tbody>
+                {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
+              </tbody>
+              <tfoot>
+                <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Ringkasan Pembayaran Siswa</div>
