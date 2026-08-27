@@ -4,7 +4,12 @@ import { buatBackup } from '@/lib/backup';
 import { DEMO_MODE } from '@/lib/demoData';
 
 // Dipanggil Vercel Cron (mingguan, tanpa session — server-to-server) ATAU manual oleh admin lewat tombol di UI.
-export async function GET() {
+// Vercel otomatis kirim header Authorization: Bearer <CRON_SECRET> kalau env var itu di-set —
+// tanpa cek ini, siapa aja yang tau URL-nya bisa spam-trigger backup (nulis ke Storage berkali-kali).
+export async function GET(req) {
+  if (process.env.CRON_SECRET && req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ sukses: false, pesan: 'Unauthorized' }, { status: 401 });
+  }
   return jalankan();
 }
 
