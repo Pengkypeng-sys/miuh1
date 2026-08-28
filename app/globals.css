@@ -27,6 +27,11 @@
     font-family: inherit;
   }
   select:focus, input:focus { @apply outline-none border-primary bg-white ring-2 ring-primary/15; }
+  /* Checkbox/radio jangan ikut kena w-full/padding dari rule input di atas — biar gak stretch selebar parent */
+  input[type="checkbox"], input[type="radio"] {
+    @apply w-4 h-4 m-0 p-0 border rounded bg-white accent-primary flex-shrink-0;
+  }
+  input[type="checkbox"]:focus, input[type="radio"]:focus { @apply ring-2 ring-primary/25; }
   button {
     @apply rounded-lg bg-primary text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition-all cursor-pointer;
     font-family: inherit;
@@ -151,7 +156,10 @@
   }
   .user-menu-logout:hover { @apply bg-rose-50 brightness-100 shadow-none; }
   @media (max-width: 720px) { .user-menu { display: none; } }
-  .main-content { @apply p-8 max-w-[1500px]; animation: fadeSlide .3s cubic-bezier(.22,1,.36,1); }
+  /* Fade/slide transisi antar tab udah dihandle Framer Motion (motion.div key={tab} di page.js) —
+     JANGAN tambah CSS animation di sini juga, dua-duanya rebutan opacity/transform bikin
+     AnimatePresence macet nungguin "exit" yang gak pernah kelar (konten lama nyangkut). */
+  .main-content { @apply p-8 max-w-[1500px]; }
   @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .spinner { @apply inline-block w-4 h-4 rounded-full mr-1.5 align-[-3px] opacity-60; border: 2px solid currentColor; border-right-color: transparent; animation: spin .6s linear infinite; }

@@ -572,7 +572,7 @@ export default function Home() {
           </div>
         )}
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div className="main-content" key={tab} {...fadeSlide}>
             {tab === 'bayar' && <BayarTab p={p} />}
             {tab === 'siswa' && role === 'admin' && <SiswaTab p={p} />}

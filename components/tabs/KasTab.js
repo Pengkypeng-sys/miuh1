@@ -1,6 +1,9 @@
 'use client';
+import { useState } from 'react';
 import { Icon } from '@/lib/icons';
 import { rp, rpSigned, rpSingkat, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy, KATEGORI_PENGELUARAN } from '@/lib/format';
+
+const NAMA_BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 export function KasTab({ p }) {
   const {
@@ -9,6 +12,24 @@ export function KasTab({ p }) {
     kategoriPengeluaran, setKategoriPengeluaran,
     loadingPengeluaran, tambahPengeluaran, statusKas,
   } = p;
+
+  const now = new Date();
+  const [bulanLaporan, setBulanLaporan] = useState(now.getMonth() + 1);
+  const [tahunLaporan, setTahunLaporan] = useState(now.getFullYear());
+  const [loadingLaporan, setLoadingLaporan] = useState(false);
+
+  async function downloadLaporanBulanan() {
+    setLoadingLaporan(true);
+    const res = await fetch(`/api/laporan-bulanan?tahun=${tahunLaporan}&bulan=${bulanLaporan}`);
+    if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.pesan || 'Gagal generate laporan'); setLoadingLaporan(false); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `LAPORAN BULANAN ${bulanLaporan}-${tahunLaporan}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setLoadingLaporan(false);
+  }
 
   function downloadCsvBulanan() {
     const header = 'Bulan,Uang Masuk,Uang Keluar,Saldo\n';
@@ -182,6 +203,25 @@ export function KasTab({ p }) {
           </>
         )}
       </div>
+
+      {role === 'admin' && (
+        <div className="panel no-print">
+          <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Laporan Bulanan (format sekolah)</div>
+          <div className="panel-desc">Excel 3 sheet (Pengeluaran, SPP, Buku per kelas) — sama format kayak laporan manual yang biasa dibikin</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select style={{ width: 'auto', margin: 0 }} value={bulanLaporan} onChange={e => setBulanLaporan(Number(e.target.value))}>
+              {NAMA_BULAN.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+            </select>
+            <input
+              type="number" style={{ width: 100, margin: 0 }}
+              value={tahunLaporan} onChange={e => setTahunLaporan(Number(e.target.value))}
+            />
+            <button className="secondary action-btn btn-icon" disabled={loadingLaporan} onClick={downloadLaporanBulanan}>
+              {loadingLaporan ? <span className="spinner" /> : <Icon name="save" size={14} />} Download Laporan Bulanan
+            </button>
+          </div>
+        </div>
+      )}
 
       {kas && kas.rekapBulanan && (
         <div className="panel panel-print">

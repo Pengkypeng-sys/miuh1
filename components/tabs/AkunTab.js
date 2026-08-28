@@ -29,14 +29,14 @@ export function AkunTab({ p }) {
         <div className="panel-title"><span className="ic-badge"><Icon name="lock" size={14} /></span> Ganti Password</div>
         <div className="panel-desc">Login sebagai <b>{nama}</b> ({role})</div>
 
-        <label>Password Lama</label>
-        <input type="password" value={passwordLama} onChange={e => setPasswordLama(e.target.value)} />
+        <label htmlFor="akun-password-lama">Password Lama</label>
+        <input id="akun-password-lama" name="passwordLama" autoComplete="current-password" type="password" value={passwordLama} onChange={e => setPasswordLama(e.target.value)} />
 
-        <label>Password Baru</label>
-        <input type="password" value={passwordBaru} onChange={e => setPasswordBaru(e.target.value)} placeholder="minimal 6 karakter" />
+        <label htmlFor="akun-password-baru">Password Baru</label>
+        <input id="akun-password-baru" name="passwordBaru" autoComplete="new-password" type="password" value={passwordBaru} onChange={e => setPasswordBaru(e.target.value)} placeholder="minimal 6 karakter" />
 
-        <label>Konfirmasi Password Baru</label>
-        <input type="password" value={passwordKonfirmasi} onChange={e => setPasswordKonfirmasi(e.target.value)} />
+        <label htmlFor="akun-password-konfirmasi">Konfirmasi Password Baru</label>
+        <input id="akun-password-konfirmasi" name="passwordKonfirmasi" autoComplete="new-password" type="password" value={passwordKonfirmasi} onChange={e => setPasswordKonfirmasi(e.target.value)} />
 
         <button disabled={loading || !passwordLama || !passwordBaru} onClick={gantiPassword} className="btn-icon" style={{ marginTop: 10, maxWidth: 220 }}>
           {loading ? <span className="spinner" /> : <Icon name="check" size={15} />} Simpan Password

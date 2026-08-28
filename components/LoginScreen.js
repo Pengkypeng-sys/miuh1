@@ -43,11 +43,12 @@ export function LoginScreen({ username, setUsername, password, setPassword, show
         <LoginLogo />
         <h2>Dashboard Pembayaran Siswa</h2>
         <div className="subtitle">MI Unwanul Huda 1 — Masuk untuk mengelola data pembayaran</div>
-        <label>Username</label>
-        <input value={username} onChange={e => setUsername(e.target.value)} placeholder="username" />
-        <label>Password</label>
+        <label htmlFor="login-username">Username</label>
+        <input id="login-username" name="username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} placeholder="username" />
+        <label htmlFor="login-password">Password</label>
         <div className="password-field">
           <input
+            id="login-password" name="password" autoComplete="current-password"
             type={showPassword ? 'text' : 'password'} value={password}
             onChange={e => setPassword(e.target.value)} placeholder="password"
             onKeyDown={e => e.key === 'Enter' && doLogin()}
