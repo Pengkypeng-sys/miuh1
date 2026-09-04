@@ -90,12 +90,18 @@ export function BayarTab({ p }) {
             {bukuOn && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%' }}>
-                  {Object.keys(BUKU_KELAS_MAP).map(k => (
-                    <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap' }}>
-                      <input type="checkbox" checked={bukuKelasPilih === k} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
-                      {k}
-                    </label>
-                  ))}
+                  {Object.keys(BUKU_KELAS_MAP).map(k => {
+                    const item = itemList.find(i => i.nama === BUKU_KELAS_MAP[k]);
+                    const val = Number(itemValues[item?.kolom]) || 0;
+                    const bukuLunas = item && item.target > 0 && hitungStatus(val, item.target) === 'lunas' && role !== 'admin';
+                    return (
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap', opacity: bukuLunas ? 0.55 : 1 }} title={bukuLunas ? 'Udah lunas, gak bisa disetor lagi' : ''}>
+                        <input type="checkbox" checked={bukuKelasPilih === k} disabled={bukuLunas} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
+                        {k}
+                        {bukuLunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
+                      </label>
+                    );
+                  })}
                 </div>
                 {bukuKelasPilih && (
                   <>
