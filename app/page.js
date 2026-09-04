@@ -60,6 +60,7 @@ export default function Home() {
   const [bukuNominal, setBukuNominal] = useState('');
   const [sppOn, setSppOn] = useState(false);
   const [sppBulan, setSppBulan] = useState([]);
+  const [sppBulananStatus, setSppBulananStatus] = useState({ perBulan: {}, target: 0 }); // { [bulanKe]: nominal }, target = SPP per bulan
   const [sppNominal, setSppNominal] = useState('');
   const [tabunganOn, setTabunganOn] = useState(false);
   const [tabunganNominal, setTabunganNominal] = useState('');
@@ -171,7 +172,14 @@ export default function Home() {
   useEffect(() => {
     if (!kelas || !siswa) { setItemValues({}); return; }
     loadItemValues();
+    loadSppBulanan();
   }, [kelas, siswa]);
+
+  async function loadSppBulanan() {
+    if (!kelas || !siswa) { setSppBulananStatus({ perBulan: {}, target: 0 }); return; }
+    const res = await fetch(`/api/spp-bulanan?kelas=${encodeURIComponent(kelas)}&siswa=${encodeURIComponent(siswa)}`).then(r => r.json());
+    setSppBulananStatus(res.perBulan ? res : { perBulan: {}, target: 0 });
+  }
 
   useEffect(() => { setShowPindah(false); setPindahKeKolom(''); setPindahNominal(''); }, [kolom, siswa]);
 
@@ -326,6 +334,17 @@ export default function Home() {
       hasil.push({ ...res, nominalSetor: Number(nominal), mode });
       if (res.sukses) setItemValues(prev => ({ ...prev, [k]: res.total }));
     }
+
+    // Catet ke tabel spp_bulanan juga (dual-write) — buat nge-lock bulan yang udah lunas di checkbox
+    const sppItemBerhasil = hasil.find((h, i) => daftarBayar[i]?.kolom === itemList.find(it => it.nama === 'SPP')?.kolom && h.sukses);
+    if (sppOn && sppBulan.length > 0 && onlyDigits(sppNominal) && sppItemBerhasil) {
+      await fetch('/api/spp-bulanan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kelas, siswa, bulanList: sppBulan, nominal: onlyDigits(sppNominal) }),
+      }).then(r => r.json()).catch(() => {});
+      loadSppBulanan();
+    }
+
     setLoadingBtn(false);
 
     const sukses = hasil.filter(h => h.sukses);
@@ -521,6 +540,7 @@ export default function Home() {
     ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
+    sppBulananStatus,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
     role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,

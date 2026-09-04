@@ -141,6 +141,7 @@ export async function GET(req) {
   const params = new URL(req.url).searchParams;
   const tanggal = params.get('tanggal') || tanggalJakarta().tanggal;
   const semua = tanggal === 'semua';
+  const modeBulan = /^\d{4}-\d{2}$/.test(tanggal); // 'YYYY-MM' — filter satu bulan penuh, bukan satu hari
 
   try {
     const [logRows, pengeluaranRows] = await Promise.all([
@@ -154,7 +155,10 @@ export async function GET(req) {
       if (!r.waktu) return;
       if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
       const { tanggal: tgl, jam } = tanggalJakarta(new Date(r.waktu));
-      if (!semua && tgl !== tanggal) return;
+      if (modeBulan) {
+        const [dd, mm, yyyy] = tgl.split('/');
+        if (`${yyyy}-${mm}` !== tanggal) return;
+      } else if (!semua && tgl !== tanggal) return;
       const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
       if (delta <= 0) return;
       masuk += delta;
@@ -166,14 +170,16 @@ export async function GET(req) {
     pengeluaranRows.forEach(r => {
       if (!r.tanggal) return;
       const tgl = r.tanggal.split('-').reverse().join('/'); // 'YYYY-MM-DD' (Postgres date) -> 'DD/MM/YYYY'
-      if (!semua && tgl !== tanggal) return;
+      if (modeBulan) {
+        if (r.tanggal.slice(0, 7) !== tanggal) return;
+      } else if (!semua && tgl !== tanggal) return;
       const n = Number(r.nominal) || 0;
       keluar += n;
       transaksiKeluar.push({ tanggal: tgl, keterangan: r.keterangan, nominal: n, user: r.dicatat_oleh, kategori: r.kategori || 'Lainnya' });
     });
 
     return NextResponse.json({
-      tanggal: semua ? 'Semua Tanggal' : tanggal, semua, masuk, keluar, saldo: masuk - keluar,
+      tanggal: semua ? 'Semua Tanggal' : tanggal, semua, modeBulan, masuk, keluar, saldo: masuk - keluar,
       transaksiMasuk: transaksiMasuk.sort((a, b) => (a.tanggal + a.jam).localeCompare(b.tanggal + b.jam)).reverse(),
       transaksiKeluar,
       rekapPerItem: rekapPerItem(transaksiMasuk),

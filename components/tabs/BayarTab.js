@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
@@ -14,11 +15,13 @@ export function BayarTab({ p }) {
     ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
+    sppBulananStatus,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
     role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
   } = p;
+  const [tampilkanLunas, setTampilkanLunas] = useState(false);
 
   return (
     <div className="bayar-grid">
@@ -117,16 +120,23 @@ export function BayarTab({ p }) {
             {sppOn && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
-                  {BULAN_LIST.map(b => (
-                    <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400 }}>
-                      <input
-                        type="checkbox"
-                        checked={sppBulan.includes(b)}
-                        onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
-                      />
-                      {b}
-                    </label>
-                  ))}
+                  {BULAN_LIST.map((b, i) => {
+                    const nominalBulan = sppBulananStatus.perBulan[i + 1] || 0;
+                    const lunas = sppBulananStatus.target > 0 && nominalBulan >= sppBulananStatus.target;
+                    return (
+                      <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400, opacity: lunas ? 0.55 : 1 }} title={lunas ? `Lunas — ${b} udah disetor penuh` : nominalBulan > 0 ? `Nyicil, udah masuk Rp ${nominalBulan.toLocaleString('id-ID')}` : ''}>
+                        <input
+                          type="checkbox"
+                          checked={sppBulan.includes(b)}
+                          disabled={lunas}
+                          onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
+                        />
+                        {b}
+                        {lunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
+                        {!lunas && nominalBulan > 0 && <span className="status-chip cicil" style={{ fontSize: 9, padding: '0 5px' }}>Nyicil</span>}
+                      </label>
+                    );
+                  })}
                 </div>
                 <input
                   type="text" inputMode="numeric" className="checkout-nominal"
@@ -204,49 +214,16 @@ export function BayarTab({ p }) {
         {statusBayar && <div className={`status ${statusBayar.sukses ? 'sukses' : 'gagal'}`}>{statusBayar.pesan}</div>}
       </div>
 
-      {kwitansi && (
-        <div className="panel panel-print">
-          <div className="panel-header no-print">
-            <div>
-              <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
-              <div className="panel-desc">{kwitansi.siswa} — {kwitansi.kelas}</div>
-            </div>
-            <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
-          </div>
-
-          <div className="print-only print-kop">
-            <img src="/logo-mi.png" alt="" className="print-kop-logo" />
-            <div>
-              <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-              <div className="print-kop-judul">Kwitansi Pembayaran</div>
-              <div className="print-kop-tanggal">{kwitansi.waktu}</div>
-            </div>
-          </div>
-
-          <div style={{ padding: '4px 2px 12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
-              <tbody>
-                {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
-              </tbody>
-              <tfoot>
-                <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-
       <div className="panel">
-        <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Ringkasan Pembayaran Siswa</div>
-        <div className="panel-desc">Status semua item untuk siswa yang dipilih</div>
+        <div className="panel-header">
+          <div>
+            <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Ringkasan Pembayaran Siswa</div>
+            <div className="panel-desc">Item yang belum lunas / masih nyicil — yang udah lunas otomatis disembunyiin</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 400, whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={tampilkanLunas} onChange={e => setTampilkanLunas(e.target.checked)} /> Tampilkan yang lunas
+          </label>
+        </div>
 
         {siswa && (
           <div className="siswa-card">
@@ -268,7 +245,11 @@ export function BayarTab({ p }) {
             // Item varian PPDB/BUKU (6+3 kemungkinan) cuma ditampilin kalau siswa ini emang punya
             // catatan bayar di varian itu — kalau semua ditampilin defaultnya numpuk 9 baris "belum bayar".
             const isVarian = i.nama.startsWith('PPDB') || i.nama.startsWith('BUKU');
-            return !isVarian || Number(itemValues[i.kolom]) > 0;
+            if (isVarian && !(Number(itemValues[i.kolom]) > 0)) return false;
+            if (tampilkanLunas) return true;
+            const ket = itemValues.__keterangan?.[i.kolom];
+            const target = targetSebenarnya(i.nama, ket, i.target);
+            return hitungStatus(Number(itemValues[i.kolom]) || 0, target) !== 'lunas';
           }).map(i => {
             const val = Number(itemValues[i.kolom]) || 0;
             const ket = itemValues.__keterangan?.[i.kolom];
@@ -350,6 +331,46 @@ export function BayarTab({ p }) {
           </button>
         )}
       </div>
+
+      {kwitansi && (
+        <div className="panel panel-print" style={{ gridColumn: 2 }}>
+          <div className="panel-header no-print">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
+              <div className="panel-desc">{kwitansi.siswa} — {kwitansi.kelas}</div>
+            </div>
+            <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
+          </div>
+
+          <div className="print-only print-kop">
+            <img src="/logo-mi.png" alt="" className="print-kop-logo" />
+            <div>
+              <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+              <div className="print-kop-judul">Kwitansi Pembayaran</div>
+              <div className="print-kop-tanggal">{kwitansi.waktu}</div>
+            </div>
+          </div>
+
+          <div style={{ padding: '4px 2px 12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
+          </div>
+
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
+              <tbody>
+                {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
+              </tbody>
+              <tfoot>
+                <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

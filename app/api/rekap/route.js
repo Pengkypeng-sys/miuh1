@@ -32,6 +32,26 @@ function hitungTrenBulanan(logRows) {
   return hasilList;
 }
 
+// Total pemasukan per TAHUN AJARAN (Juli-Juni, format "2025/2026") — seluruh histori data, max 5 tahun ajaran terakhir
+function hitungTotalPerTahunAjaran(logRows) {
+  const perTahunAjaran = {}; // "2025/2026" -> total
+  logRows.forEach(r => {
+    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta <= 0) return;
+    const { tanggal } = tanggalJakarta(new Date(r.waktu));
+    const [dd, mm, yyyy] = tanggal.split('/').map(Number);
+    const tahunAwal = mm >= 7 ? yyyy : yyyy - 1; // Juli-Desember masuk tahun ajaran yang dimulai tahun itu
+    const key = `${tahunAwal}/${tahunAwal + 1}`;
+    perTahunAjaran[key] = (perTahunAjaran[key] || 0) + delta;
+  });
+
+  return Object.entries(perTahunAjaran)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-5)
+    .map(([tahunAjaran, total]) => ({ tahunAjaran, total }));
+}
+
 export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
@@ -142,7 +162,10 @@ export async function GET(req) {
       console.error('Gagal ambil riwayat_siswa (mungkin tabel belum dibuat):', e.message);
     }
 
-    return NextResponse.json({ perItem, perKelas, bayarHariIni, piutang, trendBulanan: hitungTrenBulanan(logRows), riwayatSiswa, kelasFilter: kelasFilter || null, tanggalBayar });
+    return NextResponse.json({
+      perItem, perKelas, bayarHariIni, piutang, riwayatSiswa, kelasFilter: kelasFilter || null, tanggalBayar,
+      trendBulanan: hitungTrenBulanan(logRows), totalPerTahunAjaran: hitungTotalPerTahunAjaran(logRows),
+    });
   } catch (e) {
     console.error('GET /api/rekap gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil rekap: ' + e.message }, { status: 500 });

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/lib/icons';
 import { rp, rpSigned, rpSingkat, formatRibuan, ddmmyyyyToIso, isoToDdmmyyyy, KATEGORI_PENGELUARAN } from '@/lib/format';
 
@@ -17,10 +17,22 @@ export function KasTab({ p }) {
   const [bulanLaporan, setBulanLaporan] = useState(now.getMonth() + 1);
   const [tahunLaporan, setTahunLaporan] = useState(now.getFullYear());
   const [loadingLaporan, setLoadingLaporan] = useState(false);
+  const [daftarItemLaporan, setDaftarItemLaporan] = useState(['SPP', 'BUKU']); // fallback sebelum fetch selesai
+  const [itemLaporan, setItemLaporan] = useState(['SPP', 'BUKU']); // sheet pemasukan mana yang diikutin
+  const [includePengeluaran, setIncludePengeluaran] = useState(true);
+  function toggleItemLaporan(item) {
+    setItemLaporan(cur => cur.includes(item) ? cur.filter(x => x !== item) : [...cur, item]);
+  }
+  useEffect(() => {
+    if (role !== 'admin') return;
+    fetch('/api/laporan-bulanan', { method: 'POST' }).then(r => r.json()).then(res => {
+      if (res.sukses) setDaftarItemLaporan(res.items);
+    });
+  }, [role]);
 
   async function downloadLaporanBulanan() {
     setLoadingLaporan(true);
-    const res = await fetch(`/api/laporan-bulanan?tahun=${tahunLaporan}&bulan=${bulanLaporan}`);
+    const res = await fetch(`/api/laporan-bulanan?tahun=${tahunLaporan}&bulan=${bulanLaporan}&items=${itemLaporan.join(',')}&pengeluaran=${includePengeluaran ? 1 : 0}`);
     if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.pesan || 'Gagal generate laporan'); setLoadingLaporan(false); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -47,14 +59,20 @@ export function KasTab({ p }) {
       <div className="panel panel-print">
         <div className="panel-header">
           <div>
-            <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : 'Kas Hari Ini'}</div>
+            <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : kas?.modeBulan ? 'Kas per Bulan' : 'Kas Hari Ini'}</div>
             <div className="panel-desc">{kas && !kas.error ? kas.tanggal : '—'}</div>
           </div>
           <div className="toolbar no-print">
             <input
               type="date"
-              value={tanggalKas && tanggalKas !== 'semua' ? ddmmyyyyToIso(tanggalKas) : ''}
+              value={tanggalKas && tanggalKas !== 'semua' && !/^\d{4}-\d{2}$/.test(tanggalKas) ? ddmmyyyyToIso(tanggalKas) : ''}
               onChange={e => setTanggalKas(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
+            />
+            <input
+              type="month"
+              title="Lihat per bulan"
+              value={/^\d{4}-\d{2}$/.test(tanggalKas) ? tanggalKas : ''}
+              onChange={e => setTanggalKas(e.target.value || '')}
             />
             <button className={`secondary action-btn btn-icon ${tanggalKas === 'semua' ? 'active-toggle' : ''}`} onClick={() => setTanggalKas(tanggalKas === 'semua' ? '' : 'semua')}>
               <Icon name="list" size={14} /> {tanggalKas === 'semua' ? 'Kembali ke Hari Ini' : 'Lihat Semua'}
@@ -207,8 +225,8 @@ export function KasTab({ p }) {
       {role === 'admin' && (
         <div className="panel no-print">
           <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Laporan Bulanan (format sekolah)</div>
-          <div className="panel-desc">Excel 3 sheet (Pengeluaran, SPP, Buku per kelas) — sama format kayak laporan manual yang biasa dibikin</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="panel-desc">Excel — sheet Pengeluaran + 1 sheet per item pemasukan yang dicentang, sama format kayak laporan manual yang biasa dibikin</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
             <select style={{ width: 'auto', margin: 0 }} value={bulanLaporan} onChange={e => setBulanLaporan(Number(e.target.value))}>
               {NAMA_BULAN.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
             </select>
@@ -219,6 +237,16 @@ export function KasTab({ p }) {
             <button className="secondary action-btn btn-icon" disabled={loadingLaporan} onClick={downloadLaporanBulanan}>
               {loadingLaporan ? <span className="spinner" /> : <Icon name="save" size={14} />} Download Laporan Bulanan
             </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '4px 8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 400, margin: 0 }}>
+              <input type="checkbox" checked={includePengeluaran} onChange={e => setIncludePengeluaran(e.target.checked)} /> Pengeluaran
+            </label>
+            {daftarItemLaporan.map(item => (
+              <label key={item} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 400, margin: 0 }}>
+                <input type="checkbox" checked={itemLaporan.includes(item)} onChange={() => toggleItemLaporan(item)} /> {item}
+              </label>
+            ))}
           </div>
         </div>
       )}
