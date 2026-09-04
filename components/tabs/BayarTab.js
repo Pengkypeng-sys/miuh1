@@ -24,6 +24,105 @@ export function BayarTab({ p }) {
   const [tampilkanLunas, setTampilkanLunas] = useState(false);
   const [bukaKunci, setBukaKunci] = useState(new Set()); // kolom yang dibuka manual sama admin buat koreksi
 
+  // Wali kelas (role guru): akun read-only, cuma pilih kelas+siswa terus liat status lunas/belum lunas —
+  // gak ada akses input/edit pembayaran sama sekali.
+  if (role === 'guru') {
+    return (
+      <div className="bayar-grid">
+        <div className="panel">
+          <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Pilih Siswa</div>
+          <div className="panel-desc">Liat status pembayaran siswa (lunas/belum lunas) per kelas</div>
+
+          <label>Pilih Kelas</label>
+          <select value={kelas} onChange={e => setKelas(e.target.value)}>
+            {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
+
+          <label>Nama Siswa</label>
+          <input
+            list="daftar-siswa-bayar"
+            value={siswa}
+            onChange={e => setSiswa(e.target.value)}
+            placeholder={siswaList.length === 0 ? 'Belum ada siswa di kelas ini' : 'ketik atau pilih nama siswa...'}
+          />
+          <datalist id="daftar-siswa-bayar">
+            {siswaList.map(s => <option key={s} value={s} />)}
+          </datalist>
+        </div>
+
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Status Pembayaran Siswa</div>
+              <div className="panel-desc">Item yang belum lunas / masih nyicil — yang udah lunas otomatis disembunyiin</div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 400, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={tampilkanLunas} onChange={e => setTampilkanLunas(e.target.checked)} /> Tampilkan yang lunas
+            </label>
+          </div>
+
+          {siswa && (
+            <div className="siswa-card">
+              <div className="avatar">{siswa.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
+              <div>
+                <div className="nm">{siswa}</div>
+                <div className="kl">{kelas}</div>
+              </div>
+            </div>
+          )}
+
+          {loadingRingkasan && (
+            <div className="item-status-list">
+              {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
+            </div>
+          )}
+          {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
+            {itemList.filter(i => {
+              const isVarian = i.nama.startsWith('PPDB') || i.nama.startsWith('BUKU');
+              if (isVarian && !(Number(itemValues[i.kolom]) > 0)) return false;
+              if (tampilkanLunas) return true;
+              const ket = itemValues.__keterangan?.[i.kolom];
+              const target = targetSebenarnya(i.nama, ket, i.target);
+              return hitungStatus(Number(itemValues[i.kolom]) || 0, target) !== 'lunas';
+            }).map(i => {
+              const val = Number(itemValues[i.kolom]) || 0;
+              const ket = itemValues.__keterangan?.[i.kolom];
+              const target = targetSebenarnya(i.nama, ket, i.target);
+              const status = hitungStatus(val, target);
+              const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
+              const sisa = target ? val - target : null;
+              return (
+                <motion.div key={i.kolom} className="item-status-row" variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="nm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {status !== 'belum' && <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : 'Nyicil'}</span>}
+                        <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
+                          {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
+                        </span>
+                      </span>
+                    </div>
+                    {status === 'cicil' && (
+                      <>
+                        <div style={{ marginTop: 6, height: 6 }}>
+                          <BarFill pct={pct} color="var(--gold)" />
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
+                          Sisa {rpSigned(sisa)}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bayar-grid">
       <div className="panel">

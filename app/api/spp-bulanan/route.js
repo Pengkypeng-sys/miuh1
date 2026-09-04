@@ -43,6 +43,7 @@ export async function GET(req) {
 export async function POST(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Session habis, silakan login ulang', sessionExpired: true });
+  if (session.role === 'guru') return NextResponse.json({ sukses: false, pesan: 'Akun ini cuma bisa liat, gak bisa input pembayaran' });
 
   const { kelas, siswa, bulanList, nominal, tahun } = await req.json();
   if (DEMO_MODE) return NextResponse.json({ sukses: true });
