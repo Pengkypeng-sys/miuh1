@@ -381,8 +381,8 @@ export function RekapTab({ p }) {
                         ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
                         : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
                       const teks = status === 'lunas' ? 'Lunas'
-                        : status === 'cicil' ? `${rpSingkat(val)}, kurang ${rpSingkat(sisa)}`
-                        : target > 0 ? `kurang ${rpSingkat(target)}` : '—';
+                        : status === 'cicil' ? `${rpSingkat(val)}/${rpSingkat(target)}`
+                        : target > 0 ? `-${rpSingkat(target)}` : '—';
                       return (
                         <td key={it.kolom} title={tooltip}>
                           <span className={`status-chip ${status}`}>{teks}</span>
