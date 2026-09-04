@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { rp, formatRibuan, ITEM_ICONS, ITEM_KATEGORI } from '@/lib/format';
@@ -86,6 +86,63 @@ function VariantGroup({ label, icon, items, itemList, rowProps }) {
   );
 }
 
+// Target SPP beda per kelas (bukan 1 angka flat kayak item lain) dan bisa ganti tiap tahun ajaran —
+// disimpen di tabel spp_target sendiri, diedit di sini biar gak ilang kalau kode di-deploy ulang.
+function SppTargetPanel({ kelasList }) {
+  const [target, setTarget] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [editKelas, setEditKelas] = useState(null);
+  const [editVal, setEditVal] = useState('');
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/spp-target').then(r => r.json()).then(data => { setTarget(data && !data.pesan ? data : {}); setLoading(false); });
+  }, []);
+
+  async function simpan(kelas) {
+    const res = await fetch('/api/spp-target', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kelas, target: onlyDigitsSpp(editVal) }),
+    }).then(r => r.json());
+    setStatus(res);
+    if (res.sukses) setTarget(prev => ({ ...prev, [kelas]: Number(onlyDigitsSpp(editVal)) || 0 }));
+    setEditKelas(null);
+  }
+  function onlyDigitsSpp(v) { return String(v).replace(/\D/g, ''); }
+
+  return (
+    <div className="panel" style={{ gridColumn: '1 / -1' }}>
+      <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> Target SPP per Kelas</div>
+      <div className="panel-desc">Beda dari item lain — SPP bisa beda harga tiap kelas, dan bisa ganti tiap tahun ajaran</div>
+      {loading && <div className="hint-text">Memuat...</div>}
+      {!loading && (
+        <div className="item-manage-list">
+          {kelasList.map(k => (
+            <div key={k} className="item-manage-row">
+              <span className="nm" style={{ flex: 1 }}>{k}</span>
+              {editKelas === k ? (
+                <>
+                  <input type="text" inputMode="numeric" value={editVal} onChange={e => setEditVal(formatRibuan(e.target.value))} style={{ width: 130 }} />
+                  <button className="btn-icon" style={{ width: 'auto', padding: '5px 10px' }} onClick={() => simpan(k)}><Icon name="check" size={12} /></button>
+                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} onClick={() => setEditKelas(null)}><Icon name="minus" size={12} /></button>
+                </>
+              ) : (
+                <>
+                  <span className="target">{rp(target[k] || 0)}</span>
+                  <button className="secondary btn-icon" style={{ width: 'auto', padding: '5px 10px' }} onClick={() => { setEditKelas(k); setEditVal(formatRibuan(String(target[k] || ''))); }}>
+                    <Icon name="edit" size={12} />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {status && <div className={`status ${status.sukses ? 'sukses' : 'gagal'}`}>{status.pesan}</div>}
+    </div>
+  );
+}
+
 export function ItemTab({ p }) {
   const {
     kelasList,
@@ -155,6 +212,8 @@ export function ItemTab({ p }) {
         </button>
         {statusItem && <div className={`status ${statusItem.sukses ? 'sukses' : 'gagal'}`}>{statusItem.pesan}</div>}
       </div>
+
+      <SppTargetPanel kelasList={kelasList} />
 
       <div className="panel" style={{ gridColumn: '1 / -1' }}>
         <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Jenis Pembayaran Aktif ({itemList.length})</div>

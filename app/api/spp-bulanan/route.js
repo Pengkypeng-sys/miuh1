@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, findSiswaId, targetSppKelas } from '@/lib/db';
 import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
-import { BULAN_LIST, SPP_TARGET_PER_KELAS } from '@/lib/format';
+import { BULAN_LIST } from '@/lib/format';
 import { DEMO_MODE } from '@/lib/demoData';
 
 // Status SPP per bulan buat 1 siswa — dipake buat nentuin bulan mana yang udah Lunas (dikunci) di form Bayar.
@@ -22,7 +22,7 @@ export async function GET(req) {
     const siswaRow = throwIfError(await db().from('siswa').select('id, yatim').eq('kelas', kelas).eq('nama', siswa).maybeSingle());
     if (!siswaRow) return NextResponse.json({ perBulan: {}, target: 0 });
 
-    const target = SPP_TARGET_PER_KELAS[kelas] || 0;
+    const target = await targetSppKelas(kelas);
     // Siswa yatim gratis SPP — semua bulan dianggap lunas tanpa nunggu setoran beneran.
     if (siswaRow.yatim) {
       const perBulan = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, target]));

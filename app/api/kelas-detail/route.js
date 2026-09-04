@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, targetSppKelas } from '@/lib/db';
 import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
-import { BULAN_LIST, SPP_TARGET_PER_KELAS } from '@/lib/format';
+import { BULAN_LIST } from '@/lib/format';
 import { DEMO_MODE, DEMO_SISWA, DEMO_ITEMS } from '@/lib/demoData';
 
 // Tabel siswa x item buat 1 kelas — 3 query total (item, siswa, pembayaran), bukan loop per siswa.
@@ -30,12 +30,13 @@ export async function GET(req) {
 
   try {
     const itemRows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));
+    const target = await targetSppKelas(kelas);
     // SPP jadi 1 kolom sesuai bulan/tahun yang dipilih (dari tabel spp_bulanan, target per kelas) —
     // bukan digelar 12 kolom sekaligus.
     const items = itemRows
       .filter(it => !it.kelas_scope || it.kelas_scope.includes(kelas))
       .map(it => it.nama === 'SPP'
-        ? { nama: `SPP ${BULAN_LIST[bulanSpp - 1] || ''}`, kolom: 'spp', target: SPP_TARGET_PER_KELAS[kelas] || 0 }
+        ? { nama: `SPP ${BULAN_LIST[bulanSpp - 1] || ''}`, kolom: 'spp', target }
         : { nama: it.nama, kolom: it.id, target: it.target });
 
     const siswaRows = throwIfError(await db().from('siswa').select('id, nama, yatim').eq('kelas', kelas));
@@ -58,7 +59,6 @@ export async function GET(req) {
     const siswa = siswaRows
       .map(s => {
         const pay = bySiswa[s.id] || {};
-        const target = SPP_TARGET_PER_KELAS[kelas] || 0;
         return {
           nama: s.nama,
           values: Object.fromEntries(items.map(it => {
