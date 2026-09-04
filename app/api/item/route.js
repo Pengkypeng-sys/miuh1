@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, targetSppKelas } from '@/lib/db';
 import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { DEMO_MODE, DEMO_ITEMS } from '@/lib/demoData';
 
@@ -18,9 +18,10 @@ export async function GET(req) {
 
   try {
     const rows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));
+    const targetSpp = await targetSppKelas(kelas);
     const items = rows
       .filter(it => !it.kelas_scope || it.kelas_scope.includes(kelas))
-      .map(it => ({ nama: it.nama, kolom: it.id, target: it.target, icon: it.icon, kategori: it.kategori, urutan: it.urutan }));
+      .map(it => ({ nama: it.nama, kolom: it.id, target: it.nama === 'SPP' ? targetSpp : it.target, icon: it.icon, kategori: it.kategori, urutan: it.urutan }));
     return NextResponse.json(items);
   } catch (e) {
     console.error('GET /api/item gagal:', e);

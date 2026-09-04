@@ -278,9 +278,7 @@ export function RekapTab({ p }) {
             <select className="no-print" style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(Number(e.target.value))} title="Bulan SPP yang ditampilin">
               {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
             </select>
-            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin">
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <input type="number" className="no-print" style={{ width: 90, margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin" />
             {kelasDetail && (
               <button
                 className="secondary action-btn btn-icon"
