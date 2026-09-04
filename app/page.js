@@ -161,7 +161,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!kelas) return;
-    fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { const l = Array.isArray(list) ? list : []; setSiswaList(l); setSiswa(l[0] || ''); });
+    fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { const l = Array.isArray(list) ? list : []; setSiswaList(l); setSiswa(''); });
     fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
   }, [kelas]);
 
@@ -537,7 +537,7 @@ export default function Home() {
   }
 
   const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun']
-    : role === 'guru' ? ['rekap', 'bayar', 'akun']
+    : role === 'guru' ? ['bayar', 'akun']
     : ['rekap', 'bayar', 'kas', 'akun'];
   const meta = TAB_META[tab];
 
