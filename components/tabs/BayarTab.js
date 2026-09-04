@@ -165,14 +165,17 @@ export function BayarTab({ p }) {
             const checked = checkedItems.has(i.kolom);
             const val = Number(itemValues[i.kolom]) || 0;
             const status = hitungStatus(val, i.target);
+            // Item yang beneran udah lunas (target asli, bukan "tanpa target") dikunci — staf gak bisa
+            // nyetor lagi ke item yang udah kelar. Admin tetep bisa buka buat koreksi ("Timpa nilai langsung").
+            const terkunci = i.target > 0 && status === 'lunas' && role !== 'admin';
             return (
-              <div key={i.kolom} className={`checkout-row ${checked ? 'checked full' : ''}`}>
-                <label className="checkout-check">
-                  <input type="checkbox" checked={checked} onChange={() => toggleCheckedItem(i.kolom)} />
+              <div key={i.kolom} className={`checkout-row ${checked ? 'checked full' : ''}`} style={terkunci ? { opacity: 0.55 } : undefined}>
+                <label className="checkout-check" title={terkunci ? 'Udah lunas, gak bisa disetor lagi' : ''}>
+                  <input type="checkbox" checked={checked} disabled={terkunci} onChange={() => toggleCheckedItem(i.kolom)} />
                   <Icon name={i.icon || 'receipt'} size={13} />
                   <span className="nm">{i.nama}</span>
                   {status !== 'belum' && (
-                    <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓ lunas' : 'nyicil'}</span>
+                    <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓ Lunas' : 'Nyicil'}</span>
                   )}
                 </label>
                 {checked && (
