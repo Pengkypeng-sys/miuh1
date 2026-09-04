@@ -22,6 +22,7 @@ export function BayarTab({ p }) {
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
   } = p;
   const [tampilkanLunas, setTampilkanLunas] = useState(false);
+  const [bukaKunci, setBukaKunci] = useState(new Set()); // kolom yang dibuka manual sama admin buat koreksi
 
   return (
     <div className="bayar-grid">
@@ -93,12 +94,20 @@ export function BayarTab({ p }) {
                   {Object.keys(BUKU_KELAS_MAP).map(k => {
                     const item = itemList.find(i => i.nama === BUKU_KELAS_MAP[k]);
                     const val = Number(itemValues[item?.kolom]) || 0;
-                    const bukuLunas = item && item.target > 0 && hitungStatus(val, item.target) === 'lunas' && role !== 'admin';
+                    const lunas = item && item.target > 0 && hitungStatus(val, item.target) === 'lunas';
+                    const kunciKey = `buku-${k}`;
+                    const terkunci = lunas && !bukaKunci.has(kunciKey);
                     return (
-                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap', opacity: bukuLunas ? 0.55 : 1 }} title={bukuLunas ? 'Udah lunas, gak bisa disetor lagi' : ''}>
-                        <input type="checkbox" checked={bukuKelasPilih === k} disabled={bukuLunas} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
+                      <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 400, whiteSpace: 'nowrap', opacity: terkunci ? 0.55 : 1 }} title={terkunci ? 'Udah lunas, gak bisa disetor lagi' : ''}>
+                        <input type="checkbox" checked={bukuKelasPilih === k} disabled={terkunci} onChange={() => setBukuKelasPilih(bukuKelasPilih === k ? '' : k)} />
                         {k}
-                        {bukuLunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
+                        {lunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
+                        {lunas && role === 'admin' && (
+                          <button type="button" onClick={e => { e.preventDefault(); setBukaKunci(prev => terkunci ? new Set(prev).add(kunciKey) : (() => { const n = new Set(prev); n.delete(kunciKey); return n; })()); }}
+                            style={{ fontSize: 9, padding: '0 5px', background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}>
+                            {terkunci ? 'Buka kunci' : 'Kunci lagi'}
+                          </button>
+                        )}
                       </label>
                     );
                   })}
@@ -129,17 +138,25 @@ export function BayarTab({ p }) {
                   {BULAN_LIST.map((b, i) => {
                     const nominalBulan = sppBulananStatus.perBulan[i + 1] || 0;
                     const lunas = sppBulananStatus.target > 0 && nominalBulan >= sppBulananStatus.target;
+                    const kunciKey = `spp-${b}`;
+                    const terkunci = lunas && !bukaKunci.has(kunciKey);
                     return (
-                      <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400, opacity: lunas ? 0.55 : 1 }} title={lunas ? `Lunas — ${b} udah disetor penuh` : nominalBulan > 0 ? `Nyicil, udah masuk Rp ${nominalBulan.toLocaleString('id-ID')}` : ''}>
+                      <label key={b} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 400, opacity: terkunci ? 0.55 : 1 }} title={terkunci ? `Lunas — ${b} udah disetor penuh` : nominalBulan > 0 ? `Nyicil, udah masuk Rp ${nominalBulan.toLocaleString('id-ID')}` : ''}>
                         <input
                           type="checkbox"
                           checked={sppBulan.includes(b)}
-                          disabled={lunas}
+                          disabled={terkunci}
                           onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
                         />
                         {b}
                         {lunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
                         {!lunas && nominalBulan > 0 && <span className="status-chip cicil" style={{ fontSize: 9, padding: '0 5px' }}>Nyicil</span>}
+                        {lunas && role === 'admin' && (
+                          <button type="button" onClick={e => { e.preventDefault(); setBukaKunci(prev => terkunci ? new Set(prev).add(kunciKey) : (() => { const n = new Set(prev); n.delete(kunciKey); return n; })()); }}
+                            style={{ fontSize: 9, padding: '0 5px', background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}>
+                            {terkunci ? 'Buka kunci' : 'Kunci lagi'}
+                          </button>
+                        )}
                       </label>
                     );
                   })}
@@ -172,8 +189,10 @@ export function BayarTab({ p }) {
             const val = Number(itemValues[i.kolom]) || 0;
             const status = hitungStatus(val, i.target);
             // Item yang beneran udah lunas (target asli, bukan "tanpa target") dikunci — staf gak bisa
-            // nyetor lagi ke item yang udah kelar. Admin tetep bisa buka buat koreksi ("Timpa nilai langsung").
-            const terkunci = i.target > 0 && status === 'lunas' && role !== 'admin';
+            // nyetor lagi ke item yang udah kelar. Admin bisa buka manual per item buat koreksi.
+            const lunas = i.target > 0 && status === 'lunas';
+            const kunciKey = `item-${i.kolom}`;
+            const terkunci = lunas && !bukaKunci.has(kunciKey);
             return (
               <div key={i.kolom} className={`checkout-row ${checked ? 'checked full' : ''}`} style={terkunci ? { opacity: 0.55 } : undefined}>
                 <label className="checkout-check" title={terkunci ? 'Udah lunas, gak bisa disetor lagi' : ''}>
@@ -182,6 +201,12 @@ export function BayarTab({ p }) {
                   <span className="nm">{i.nama}</span>
                   {status !== 'belum' && (
                     <span className={`status-chip ${status}`} style={{ fontSize: 10 }}>{status === 'lunas' ? '✓ Lunas' : 'Nyicil'}</span>
+                  )}
+                  {lunas && role === 'admin' && (
+                    <button type="button" onClick={e => { e.preventDefault(); setBukaKunci(prev => terkunci ? new Set(prev).add(kunciKey) : (() => { const n = new Set(prev); n.delete(kunciKey); return n; })()); }}
+                      style={{ fontSize: 9, padding: '0 5px', background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}>
+                      {terkunci ? 'Buka kunci' : 'Kunci lagi'}
+                    </button>
                   )}
                 </label>
                 {checked && (
