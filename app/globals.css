@@ -460,7 +460,7 @@
   .table-wrap { overflow: visible !important; }
   body { background: #fff !important; }
 
-  .matrix-table { border-collapse: collapse; width: 100%; font-size: 8.5px; table-layout: fixed; border: 1px solid #b9d4c4; }
+  .matrix-table { border-collapse: collapse; width: 100%; font-size: 7.5px; table-layout: fixed; border: 1px solid #b9d4c4; }
   .matrix-table th, .matrix-table td { border: 1px solid #ddd; padding: 5px 3px; overflow-wrap: break-word; text-align: center; vertical-align: middle; }
   .matrix-table th:first-child, .matrix-table td:first-child { width: 15%; text-align: left; padding-left: 8px; }
   .matrix-table td:first-child { font-weight: 600; color: #222; }
@@ -471,7 +471,7 @@
   .matrix-table tbody tr:nth-child(even) { background: #f4f8f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .matrix-table tbody tr { break-inside: avoid; }
 
-  .status-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; min-width: 30px; border-radius: 4px; padding: 2px 5px; font-weight: 700; }
+  .status-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; min-width: 30px; border-radius: 4px; padding: 2px 5px; font-weight: 700; white-space: normal; word-break: break-word; }
   .status-chip.lunas { background: #dcf5e6 !important; color: #147a42 !important; }
   .status-chip.cicil { background: #fdf1d6 !important; color: #96650a !important; }
   .status-chip.belum { background: transparent !important; color: #ccc !important; }

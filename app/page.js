@@ -542,7 +542,7 @@ export default function Home() {
   }
 
   const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun']
-    : role === 'guru' ? ['bayar', 'akun']
+    : role === 'guru' ? ['bayar']
     : ['rekap', 'bayar', 'kas', 'akun'];
   const meta = TAB_META[tab];
 
