@@ -10,7 +10,11 @@ export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
 
-  const kelas = new URL(req.url).searchParams.get('kelas');
+  const params = new URL(req.url).searchParams;
+  const kelas = params.get('kelas');
+  const { tanggal } = tanggalJakarta();
+  const bulanSpp = Number(params.get('bulan')) || Number(tanggal.split('/')[1]);
+  const tahunSpp = Number(params.get('tahun')) || Number(tanggal.split('/')[2]);
 
   if (DEMO_MODE) {
     const siswa = (DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2'])
@@ -26,22 +30,21 @@ export async function GET(req) {
 
   try {
     const itemRows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));
-    // SPP dipecah jadi 12 kolom bulan (dari tabel spp_bulanan, target per kelas) — bukan 1 kolom flat,
-    // biar keliatan bulan mana yang udah lunas kayak di form Bayar.
+    // SPP jadi 1 kolom sesuai bulan/tahun yang dipilih (dari tabel spp_bulanan, target per kelas) —
+    // bukan digelar 12 kolom sekaligus.
     const items = itemRows
       .filter(it => !it.kelas_scope || it.kelas_scope.includes(kelas))
-      .flatMap(it => it.nama === 'SPP'
-        ? BULAN_LIST.map((b, i) => ({ nama: `SPP ${b}`, kolom: `spp-${i + 1}`, target: SPP_TARGET_PER_KELAS[kelas] || 0 }))
-        : [{ nama: it.nama, kolom: it.id, target: it.target }]);
+      .map(it => it.nama === 'SPP'
+        ? { nama: `SPP ${BULAN_LIST[bulanSpp - 1] || ''}`, kolom: 'spp', target: SPP_TARGET_PER_KELAS[kelas] || 0 }
+        : { nama: it.nama, kolom: it.id, target: it.target });
 
     const siswaRows = throwIfError(await db().from('siswa').select('id, nama, yatim').eq('kelas', kelas));
     if (siswaRows.length === 0) return NextResponse.json({ items, siswa: [] });
 
     const siswaIds = siswaRows.map(s => s.id);
-    const tahun = Number(tanggalJakarta().tanggal.split('/')[2]);
     const [pembayaranRows, sppRows] = await Promise.all([
       db().from('pembayaran').select('siswa_id, item_id, nominal, keterangan').in('siswa_id', siswaIds).then(r => throwIfError(r)),
-      db().from('spp_bulanan').select('siswa_id, bulan, nominal').in('siswa_id', siswaIds).eq('tahun', tahun).then(r => throwIfError(r)),
+      db().from('spp_bulanan').select('siswa_id, nominal').in('siswa_id', siswaIds).eq('tahun', tahunSpp).eq('bulan', bulanSpp).then(r => throwIfError(r)),
     ]);
 
     const bySiswa = {};
@@ -50,23 +53,16 @@ export async function GET(req) {
       bySiswa[p.siswa_id][p.item_id] = p;
     });
     const sppBySiswa = {};
-    sppRows.forEach(r => {
-      if (!sppBySiswa[r.siswa_id]) sppBySiswa[r.siswa_id] = {};
-      sppBySiswa[r.siswa_id][r.bulan] = Number(r.nominal) || 0;
-    });
+    sppRows.forEach(r => { sppBySiswa[r.siswa_id] = Number(r.nominal) || 0; });
 
     const siswa = siswaRows
       .map(s => {
         const pay = bySiswa[s.id] || {};
-        const spp = sppBySiswa[s.id] || {};
         const target = SPP_TARGET_PER_KELAS[kelas] || 0;
         return {
           nama: s.nama,
           values: Object.fromEntries(items.map(it => {
-            if (typeof it.kolom === 'string' && it.kolom.startsWith('spp-')) {
-              const bulanKe = Number(it.kolom.slice(4));
-              return [it.kolom, s.yatim ? target : (spp[bulanKe] ?? '')];
-            }
+            if (it.kolom === 'spp') return [it.kolom, s.yatim ? target : (sppBySiswa[s.id] ?? '')];
             return [it.kolom, pay[it.kolom]?.nominal ?? ''];
           })),
           keterangan: Object.fromEntries(items.map(it => [it.kolom, pay[it.kolom]?.keterangan || ''])),

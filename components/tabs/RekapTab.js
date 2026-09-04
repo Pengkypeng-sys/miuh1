@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
 import { BarFill } from '@/components/BarFill';
-import { rp, rpSingkat, targetSebenarnya, ddmmyyyyToIso, isoToDdmmyyyy } from '@/lib/format';
+import { rp, rpSingkat, targetSebenarnya, ddmmyyyyToIso, isoToDdmmyyyy, BULAN_LIST } from '@/lib/format';
 
 export function RekapTab({ p }) {
   const {
@@ -12,6 +12,7 @@ export function RekapTab({ p }) {
     kelasDetailPilih, setKelasDetailPilih, cariSiswaDetail, setCariSiswaDetail,
     loadingDetail, kelasDetail, varianFilter, setVarianFilter,
     tanggalBayarFilter, setTanggalBayarFilter,
+    bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
   } = p;
 
   const [cariPiutang, setCariPiutang] = useState('');
@@ -273,6 +274,12 @@ export function RekapTab({ p }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(Number(e.target.value))} title="Bulan SPP yang ditampilin">
+              {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+            </select>
+            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin">
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             {kelasDetail && (
               <button

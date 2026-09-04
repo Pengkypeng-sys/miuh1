@@ -20,7 +20,7 @@ export function BayarTab({ p }) {
     role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
-    kelasDetail, loadingDetail,
+    kelasDetail, loadingDetail, bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
   } = p;
   const [tampilkanLunas, setTampilkanLunas] = useState(true);
   const [bukaKunci, setBukaKunci] = useState(new Set()); // kolom yang dibuka manual sama admin buat koreksi
@@ -37,9 +37,17 @@ export function BayarTab({ p }) {
             <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Status Pembayaran Siswa — {kelas}</div>
             <div className="panel-desc">Semua siswa sekelas, status lunas/belum lunas per item</div>
           </div>
-          <select style={{ width: 'auto', margin: 0 }} value={kelas} onChange={e => setKelas(e.target.value)}>
-            {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select style={{ width: 'auto', margin: 0 }} value={kelas} onChange={e => setKelas(e.target.value)}>
+              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <select style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(Number(e.target.value))} title="Bulan SPP yang ditampilin">
+              {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+            </select>
+            <select style={{ width: 'auto', margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin">
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="search-box" style={{ margin: '12px 0' }}>

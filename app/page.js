@@ -103,6 +103,8 @@ export default function Home() {
   const [tanggalBayarFilter, setTanggalBayarFilter] = useState(''); // '' = hari ini, else dd/MM/yyyy
   const [varianFilter, setVarianFilter] = useState({});
   const [kelasDetailPilih, setKelasDetailPilih] = useState('');
+  const [bulanDetailPilih, setBulanDetailPilih] = useState(new Date().getMonth() + 1);
+  const [tahunDetailPilih, setTahunDetailPilih] = useState(new Date().getFullYear());
   const [kelasDetail, setKelasDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -247,11 +249,11 @@ export default function Home() {
     if (role === 'guru') { if (kelas) loadKelasDetail(kelas); return; }
     if (tab !== 'rekap' || !kelasDetailPilih) return;
     loadKelasDetail(kelasDetailPilih);
-  }, [tab, kelasDetailPilih, role, kelas]);
+  }, [tab, kelasDetailPilih, role, kelas, bulanDetailPilih, tahunDetailPilih]);
 
   async function loadKelasDetail(kelasTarget) {
     setLoadingDetail(true);
-    const data = await fetch(`/api/kelas-detail?kelas=${encodeURIComponent(kelasTarget)}`).then(r => r.json());
+    const data = await fetch(`/api/kelas-detail?kelas=${encodeURIComponent(kelasTarget)}&bulan=${bulanDetailPilih}&tahun=${tahunDetailPilih}`).then(r => r.json());
     setKelasDetail(data);
     setLoadingDetail(false);
   }
@@ -577,6 +579,7 @@ export default function Home() {
 
     rekap, loadRekap, rekapKelasFilter, setRekapKelasFilter, tanggalBayarFilter, setTanggalBayarFilter,
     kelasDetailPilih, setKelasDetailPilih, cariSiswaDetail, setCariSiswaDetail,
+    bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
     loadingDetail, kelasDetail, varianFilter, setVarianFilter,
   };
 
