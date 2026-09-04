@@ -242,13 +242,16 @@ export default function Home() {
   useEffect(() => { if (tab === 'rekap') loadRekap(); }, [rekapKelasFilter, tanggalBayarFilter]);
 
   useEffect(() => {
+    // Wali kelas (guru) gak punya tab Rekap — dia liat tabel siswa x item ini langsung di tab Pembayaran,
+    // dipicu dari dropdown kelas yang sama (bukan kelasDetailPilih punya Rekap).
+    if (role === 'guru') { if (kelas) loadKelasDetail(kelas); return; }
     if (tab !== 'rekap' || !kelasDetailPilih) return;
-    loadKelasDetail();
-  }, [tab, kelasDetailPilih]);
+    loadKelasDetail(kelasDetailPilih);
+  }, [tab, kelasDetailPilih, role, kelas]);
 
-  async function loadKelasDetail() {
+  async function loadKelasDetail(kelasTarget) {
     setLoadingDetail(true);
-    const data = await fetch(`/api/kelas-detail?kelas=${encodeURIComponent(kelasDetailPilih)}`).then(r => r.json());
+    const data = await fetch(`/api/kelas-detail?kelas=${encodeURIComponent(kelasTarget)}`).then(r => r.json());
     setKelasDetail(data);
     setLoadingDetail(false);
   }

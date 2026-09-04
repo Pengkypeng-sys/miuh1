@@ -20,105 +20,74 @@ export function BayarTab({ p }) {
     role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
+    kelasDetail, loadingDetail,
   } = p;
-  const [tampilkanLunas, setTampilkanLunas] = useState(false);
+  const [tampilkanLunas, setTampilkanLunas] = useState(true);
   const [bukaKunci, setBukaKunci] = useState(new Set()); // kolom yang dibuka manual sama admin buat koreksi
+  const [cariSiswaGuru, setCariSiswaGuru] = useState('');
 
-  // Wali kelas (role guru): akun read-only, cuma pilih kelas+siswa terus liat status lunas/belum lunas —
-  // gak ada akses input/edit pembayaran sama sekali.
+  // Wali kelas (role guru): akun read-only, cuma pilih kelas terus liat tabel semua siswa x status
+  // lunas/belum lunas sekaligus — gak perlu klik satu-satu, gak ada akses input/edit pembayaran.
   if (role === 'guru') {
+    const siswaCocok = kelasDetail?.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaGuru.toLowerCase())) || [];
     return (
-      <div className="bayar-grid">
-        <div className="panel">
-          <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Pilih Siswa</div>
-          <div className="panel-desc">Liat status pembayaran siswa (lunas/belum lunas) per kelas</div>
-
-          <label>Pilih Kelas</label>
-          <select value={kelas} onChange={e => setKelas(e.target.value)}>
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Status Pembayaran Siswa — {kelas}</div>
+            <div className="panel-desc">Semua siswa sekelas, status lunas/belum lunas per item</div>
+          </div>
+          <select style={{ width: 'auto', margin: 0 }} value={kelas} onChange={e => setKelas(e.target.value)}>
             {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
           </select>
-
-          <label>Nama Siswa</label>
-          <input
-            list="daftar-siswa-bayar"
-            value={siswa}
-            onChange={e => setSiswa(e.target.value)}
-            placeholder={siswaList.length === 0 ? 'Belum ada siswa di kelas ini' : 'ketik atau pilih nama siswa...'}
-          />
-          <datalist id="daftar-siswa-bayar">
-            {siswaList.map(s => <option key={s} value={s} />)}
-          </datalist>
         </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Status Pembayaran Siswa</div>
-              <div className="panel-desc">Item yang belum lunas / masih nyicil — yang udah lunas otomatis disembunyiin</div>
-            </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 400, whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={tampilkanLunas} onChange={e => setTampilkanLunas(e.target.checked)} /> Tampilkan yang lunas
-            </label>
+        <div className="search-box" style={{ margin: '12px 0' }}>
+          <span className="search-ic"><Icon name="search" size={15} /></span>
+          <input value={cariSiswaGuru} onChange={e => setCariSiswaGuru(e.target.value)} placeholder="cari nama siswa..." />
+        </div>
+
+        {loadingDetail && <div className="hint-text">Memuat...</div>}
+        {!loadingDetail && kelasDetail && (
+          <div className="table-wrap">
+            <table className="matrix-table">
+              <thead>
+                <tr>
+                  <th>Nama Siswa</th>
+                  {kelasDetail.items.map(it => <th key={it.kolom}>{it.nama}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {siswaCocok.length === 0 && (
+                  <tr><td colSpan={kelasDetail.items.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
+                )}
+                {siswaCocok.map(s => (
+                  <tr key={s.nama}>
+                    <td>{s.nama}</td>
+                    {kelasDetail.items.map(it => {
+                      const val = Number(s.values[it.kolom]) || 0;
+                      const ket = s.keterangan?.[it.kolom];
+                      const target = targetSebenarnya(it.nama, ket, it.target);
+                      const status = hitungStatus(val, target);
+                      const sisa = target ? target - val : null;
+                      const ketSuffix = ket ? ` (${ket})` : '';
+                      const tooltip = status === 'lunas'
+                        ? `Lunas${ketSuffix} — ${rp(val)}`
+                        : status === 'cicil'
+                        ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
+                        : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
+                      return (
+                        <td key={it.kolom} title={tooltip}>
+                          <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : status === 'cicil' ? 'Nyicil' : 'Belum'}</span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {siswa && (
-            <div className="siswa-card">
-              <div className="avatar">{siswa.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}</div>
-              <div>
-                <div className="nm">{siswa}</div>
-                <div className="kl">{kelas}</div>
-              </div>
-            </div>
-          )}
-
-          {loadingRingkasan && (
-            <div className="item-status-list">
-              {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
-            </div>
-          )}
-          {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
-            {itemList.filter(i => {
-              const isVarian = i.nama.startsWith('PPDB') || i.nama.startsWith('BUKU');
-              if (isVarian && !(Number(itemValues[i.kolom]) > 0)) return false;
-              if (tampilkanLunas) return true;
-              const ket = itemValues.__keterangan?.[i.kolom];
-              const target = targetSebenarnya(i.nama, ket, i.target);
-              return hitungStatus(Number(itemValues[i.kolom]) || 0, target) !== 'lunas';
-            }).map(i => {
-              const val = Number(itemValues[i.kolom]) || 0;
-              const ket = itemValues.__keterangan?.[i.kolom];
-              const target = targetSebenarnya(i.nama, ket, i.target);
-              const status = hitungStatus(val, target);
-              const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
-              const sisa = target ? val - target : null;
-              return (
-                <motion.div key={i.kolom} className="item-status-row" variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="nm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {status !== 'belum' && <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : 'Nyicil'}</span>}
-                        <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
-                          {val ? rp(val) : 'Belum bayar'}{target ? ` / ${rp(target)}` : ''}
-                        </span>
-                      </span>
-                    </div>
-                    {status === 'cicil' && (
-                      <>
-                        <div style={{ marginTop: 6, height: 6 }}>
-                          <BarFill pct={pct} color="var(--gold)" />
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
-                          Sisa {rpSigned(sisa)}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>}
-        </div>
+        )}
       </div>
     );
   }
