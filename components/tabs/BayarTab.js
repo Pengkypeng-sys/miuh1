@@ -134,6 +134,7 @@ export function BayarTab({ p }) {
             </label>
             {sppOn && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%', marginTop: 6 }}>
+                {sppBulananStatus.yatim && <div className="hint-text" style={{ width: '100%' }}>Siswa yatim — SPP gratis, semua bulan otomatis lunas</div>}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, width: '100%' }}>
                   {BULAN_LIST.map((b, i) => {
                     const nominalBulan = sppBulananStatus.perBulan[i + 1] || 0;
@@ -149,9 +150,9 @@ export function BayarTab({ p }) {
                           onChange={e => setSppBulan(prev => e.target.checked ? [...prev, b] : prev.filter(x => x !== b))}
                         />
                         {b}
-                        {lunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>Lunas</span>}
+                        {lunas && <span className="status-chip lunas" style={{ fontSize: 9, padding: '0 5px' }}>{sppBulananStatus.yatim ? 'Gratis' : 'Lunas'}</span>}
                         {!lunas && nominalBulan > 0 && <span className="status-chip cicil" style={{ fontSize: 9, padding: '0 5px' }}>Nyicil</span>}
-                        {lunas && role === 'admin' && (
+                        {lunas && role === 'admin' && !sppBulananStatus.yatim && (
                           <button type="button" onClick={e => { e.preventDefault(); setBukaKunci(prev => terkunci ? new Set(prev).add(kunciKey) : (() => { const n = new Set(prev); n.delete(kunciKey); return n; })()); }}
                             style={{ fontSize: 9, padding: '0 5px', background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer' }}>
                             {terkunci ? 'Buka kunci' : 'Kunci lagi'}

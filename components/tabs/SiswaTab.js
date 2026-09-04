@@ -7,6 +7,7 @@ export function SiswaTab({ p }) {
     kelasSiswa, setKelasSiswa, kelasList, namaBaru, setNamaBaru, tambahSiswa, loadingSiswa,
     siswaHapus, setSiswaHapus, siswaHapusList, hapusSiswa, statusSiswa,
     cariSiswaKelola, setCariSiswaKelola,
+    siswaDetailList, toggleYatim,
   } = p;
 
   return (
@@ -50,12 +51,18 @@ export function SiswaTab({ p }) {
 
         <div className="siswa-list">
           {siswaHapusList.length === 0 && <div className="empty-state">Belum ada siswa di kelas ini</div>}
-          {siswaHapusList.filter(s => s.toLowerCase().includes(cariSiswaKelola.toLowerCase())).map(s => (
-            <div key={s} className={`siswa-list-row ${s === siswaHapus ? 'selected' : ''}`} onClick={() => setSiswaHapus(s)}>
-              <div className="avatar-sm">{initials(s)}</div>
-              <div className="nm">{s}</div>
-            </div>
-          ))}
+          {siswaHapusList.filter(s => s.toLowerCase().includes(cariSiswaKelola.toLowerCase())).map(s => {
+            const yatim = siswaDetailList.find(d => d.nama === s)?.yatim || false;
+            return (
+              <div key={s} className={`siswa-list-row ${s === siswaHapus ? 'selected' : ''}`} onClick={() => setSiswaHapus(s)}>
+                <div className="avatar-sm">{initials(s)}</div>
+                <div className="nm">{s}</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400, marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={yatim} onChange={e => toggleYatim(s, e.target.checked)} /> Yatim (SPP gratis)
+                </label>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -82,6 +82,7 @@ export default function Home() {
   const [kelasSiswa, setKelasSiswa] = useState('');
   const [namaBaru, setNamaBaru] = useState('');
   const [siswaHapusList, setSiswaHapusList] = useState([]);
+  const [siswaDetailList, setSiswaDetailList] = useState([]); // [{nama, yatim}] buat toggle Yatim di Kelola Siswa
   const [siswaHapus, setSiswaHapus] = useState('');
   const [statusSiswa, setStatusSiswa] = useState(null);
   const [cariSiswaKelola, setCariSiswaKelola] = useState('');
@@ -164,10 +165,17 @@ export default function Home() {
     fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
   }, [kelas]);
 
-  useEffect(() => {
+  function loadSiswaKelola() {
     if (!kelasSiswa) return;
     fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
-  }, [kelasSiswa]);
+    fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}&detail=1`).then(r => r.json()).then(list => setSiswaDetailList(Array.isArray(list) ? list : []));
+  }
+  useEffect(loadSiswaKelola, [kelasSiswa]);
+
+  async function toggleYatim(nama, yatim) {
+    setSiswaDetailList(prev => prev.map(s => s.nama === nama ? { ...s, yatim } : s)); // optimistic
+    await fetch('/api/siswa', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kelas: kelasSiswa, nama, yatim }) }).catch(() => {});
+  }
 
   useEffect(() => {
     if (!kelas || !siswa) { setItemValues({}); return; }
@@ -413,7 +421,7 @@ export default function Home() {
     setStatusSiswa(res);
     if (res.sukses) {
       setNamaBaru('');
-      fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
+      loadSiswaKelola();
       if (kelasSiswa === kelas) fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setSiswaList);
     }
   }
@@ -428,7 +436,7 @@ export default function Home() {
       setLoadingSiswa(false);
       if (cekSessionExpired(res)) return;
       setStatusSiswa(res);
-      fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
+      loadSiswaKelola();
       if (kelasSiswa === kelas) fetch(`/api/siswa?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(setSiswaList);
     });
   }
@@ -509,7 +517,7 @@ export default function Home() {
         if (cekSessionExpired(res)) return;
         setStatusKenaikan(res);
         if (res.sukses) {
-          fetch(`/api/siswa?kelas=${encodeURIComponent(kelasSiswa)}`).then(r => r.json()).then(list => { setSiswaHapusList(list); setSiswaHapus(list[0] || ''); });
+          loadSiswaKelola();
         }
       }
     );
@@ -548,6 +556,7 @@ export default function Home() {
 
     kelasSiswa, setKelasSiswa, namaBaru, setNamaBaru, tambahSiswa, loadingSiswa,
     siswaHapus, setSiswaHapus, siswaHapusList, hapusSiswa, statusSiswa,
+    siswaDetailList, toggleYatim,
     cariSiswaKelola, setCariSiswaKelola,
     namaItemBaru, setNamaItemBaru, targetItemBaru, setTargetItemBaru,
     iconItemBaru, setIconItemBaru, kategoriItemBaru, setKategoriItemBaru,

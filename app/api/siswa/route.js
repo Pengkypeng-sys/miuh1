@@ -8,16 +8,40 @@ export async function GET(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
 
-  const kelas = new URL(req.url).searchParams.get('kelas');
-  if (DEMO_MODE) return NextResponse.json((DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id')));
+  const params = new URL(req.url).searchParams;
+  const kelas = params.get('kelas');
+  const detail = params.get('detail') === '1'; // detail: balikin {nama, yatim} bukan cuma nama, dipake di Kelola Siswa
+  if (DEMO_MODE) {
+    const list = (DEMO_SISWA[kelas] || ['Contoh Siswa 1', 'Contoh Siswa 2']).sort((a, b) => a.localeCompare(b, 'id'));
+    return NextResponse.json(detail ? list.map(nama => ({ nama, yatim: false })) : list);
+  }
   if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json([]);
 
   try {
-    const rows = throwIfError(await db().from('siswa').select('nama').eq('kelas', kelas));
-    return NextResponse.json(rows.map(r => r.nama).sort((a, b) => a.localeCompare(b, 'id')));
+    const rows = throwIfError(await db().from('siswa').select('nama, yatim').eq('kelas', kelas));
+    rows.sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+    return NextResponse.json(detail ? rows.map(r => ({ nama: r.nama, yatim: !!r.yatim })) : rows.map(r => r.nama));
   } catch (e) {
     console.error('GET /api/siswa gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil data siswa: ' + e.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
+  if (session.role !== 'admin') return NextResponse.json({ sukses: false, pesan: 'Hanya admin' }, { status: 403 });
+
+  const { kelas, nama, yatim } = await req.json();
+  if (DEMO_MODE) return NextResponse.json({ sukses: true });
+  if (!KELAS_LIST.includes(kelas) || !nama) return NextResponse.json({ sukses: false, pesan: 'Data gak valid' });
+
+  try {
+    throwIfError(await db().from('siswa').update({ yatim: !!yatim }).eq('kelas', kelas).eq('nama', nama));
+    return NextResponse.json({ sukses: true });
+  } catch (e) {
+    console.error('PATCH /api/siswa gagal:', e);
+    return NextResponse.json({ sukses: false, pesan: 'Gagal update status yatim: ' + e.message }, { status: 500 });
   }
 }
 

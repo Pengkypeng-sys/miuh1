@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, throwIfError, KELAS_LIST, findSiswaId } from '@/lib/db';
 import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
-import { BULAN_LIST } from '@/lib/format';
+import { BULAN_LIST, SPP_TARGET_PER_KELAS } from '@/lib/format';
 import { DEMO_MODE } from '@/lib/demoData';
 
 // Status SPP per bulan buat 1 siswa — dipake buat nentuin bulan mana yang udah Lunas (dikunci) di form Bayar.
@@ -19,16 +19,20 @@ export async function GET(req) {
   if (DEMO_MODE) return NextResponse.json({ perBulan: {}, target: 70000 });
 
   try {
-    const siswaId = await findSiswaId(kelas, siswa);
-    if (!siswaId) return NextResponse.json({ perBulan: {}, target: 0 });
+    const siswaRow = throwIfError(await db().from('siswa').select('id, yatim').eq('kelas', kelas).eq('nama', siswa).maybeSingle());
+    if (!siswaRow) return NextResponse.json({ perBulan: {}, target: 0 });
 
-    const [rows, itemSpp] = await Promise.all([
-      db().from('spp_bulanan').select('bulan, nominal').eq('siswa_id', siswaId).eq('tahun', tahun).then(r => throwIfError(r)),
-      db().from('item_pembayaran').select('target').eq('nama', 'SPP').maybeSingle().then(r => throwIfError(r)),
-    ]);
+    const target = SPP_TARGET_PER_KELAS[kelas] || 0;
+    // Siswa yatim gratis SPP — semua bulan dianggap lunas tanpa nunggu setoran beneran.
+    if (siswaRow.yatim) {
+      const perBulan = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, target]));
+      return NextResponse.json({ perBulan, target, yatim: true });
+    }
+
+    const rows = await db().from('spp_bulanan').select('bulan, nominal').eq('siswa_id', siswaRow.id).eq('tahun', tahun).then(r => throwIfError(r));
 
     const perBulan = Object.fromEntries(rows.map(r => [r.bulan, Number(r.nominal) || 0]));
-    return NextResponse.json({ perBulan, target: Number(itemSpp?.target) || 0 });
+    return NextResponse.json({ perBulan, target });
   } catch (e) {
     console.error('GET /api/spp-bulanan gagal:', e);
     return NextResponse.json({ sukses: false, pesan: 'Gagal ambil status SPP bulanan: ' + e.message }, { status: 500 });
