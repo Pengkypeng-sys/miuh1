@@ -118,6 +118,7 @@ export function BayarTab({ p }) {
           list="daftar-siswa-bayar"
           value={siswa}
           onChange={e => setSiswa(e.target.value)}
+          onFocus={e => e.target.select()}
           placeholder={siswaList.length === 0 ? 'Belum ada siswa di kelas ini' : 'ketik atau pilih nama siswa...'}
         />
         <datalist id="daftar-siswa-bayar">
