@@ -6,12 +6,21 @@ export function KenaikanTab({ p }) {
   const { kenaikanKelas, loadingKenaikan, statusKenaikan, rekap } = p;
   const [loadingBackup, setLoadingBackup] = useState(false);
   const [statusBackup, setStatusBackup] = useState(null);
+  const [loadingBackfill, setLoadingBackfill] = useState(false);
+  const [statusBackfill, setStatusBackfill] = useState(null);
 
   async function backupSekarang() {
     setLoadingBackup(true);
     const res = await fetch('/api/cron-backup', { method: 'POST' }).then(r => r.json());
     setStatusBackup(res);
     setLoadingBackup(false);
+  }
+
+  async function backfillSppBulanan() {
+    setLoadingBackfill(true);
+    const res = await fetch('/api/spp-bulanan/backfill', { method: 'POST' }).then(r => r.json());
+    setStatusBackfill(res);
+    setLoadingBackfill(false);
   }
 
   const alur = ['KELAS 1', 'KELAS 2', 'KELAS 3', 'KELAS 4', 'KELAS 5', 'KELAS 6', 'ALUMNI'];
@@ -69,6 +78,18 @@ export function KenaikanTab({ p }) {
         {loadingBackup ? <span className="spinner" /> : <Icon name="save" size={14} />} Backup Sekarang
       </button>
       {statusBackup && <div className={`status ${statusBackup.sukses ? 'sukses' : 'gagal'}`}>{statusBackup.pesan}</div>}
+
+      <hr className="field-divider" />
+
+      <div className="panel-title" style={{ marginBottom: 4 }}><span className="ic-badge"><Icon name="refresh" size={14} /></span> Isi Ulang SPP Bulanan (sekali doang)</div>
+      <div className="hint-text" style={{ fontSize: 12.5, marginBottom: 14 }}>
+        Baca riwayat Log Aktivitas SPP yang lama, isi ke sistem SPP-per-bulan yang baru — biar bulan yang
+        udah pernah dibayar dulu ikut kekunci juga. Aman dijalanin berkali-kali, gak bakal dobel.
+      </div>
+      <button className="secondary action-btn btn-icon" style={{ maxWidth: 300 }} disabled={loadingBackfill} onClick={backfillSppBulanan}>
+        {loadingBackfill ? <span className="spinner" /> : <Icon name="refresh" size={14} />} Isi Ulang Sekarang
+      </button>
+      {statusBackfill && <div className={`status ${statusBackfill.sukses ? 'sukses' : 'gagal'}`}>{statusBackfill.pesan}</div>}
     </div>
   );
 }
