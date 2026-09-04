@@ -218,8 +218,9 @@ export function ItemTab({ p }) {
       <div className="panel" style={{ gridColumn: '1 / -1' }}>
         <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Jenis Pembayaran Aktif ({itemList.length})</div>
         <div className="panel-desc">Atur icon, kategori, urutan tampil, atau hapus jenis pembayaran</div>
-        {ITEM_KATEGORI.filter(kat => itemList.some(i => (i.kategori || 'Lainnya') === kat)).map(kat => {
-          const itemsInKat = itemList.filter(i => (i.kategori || 'Lainnya') === kat);
+        {ITEM_KATEGORI.filter(kat => itemList.some(i => i.nama !== 'SPP' && (i.kategori || 'Lainnya') === kat)).map(kat => {
+          // SPP gak ditampilin di sini — targetnya diatur di panel "Target SPP per Kelas" di atas, bukan di sini.
+          const itemsInKat = itemList.filter(i => i.nama !== 'SPP' && (i.kategori || 'Lainnya') === kat);
           const groupPpdb = itemsInKat.filter(i => i.nama.startsWith('PPDB'));
           const groupBuku = itemsInKat.filter(i => /^BUKU \d/.test(i.nama));
           const grouped = new Set([...groupPpdb, ...groupBuku]);
