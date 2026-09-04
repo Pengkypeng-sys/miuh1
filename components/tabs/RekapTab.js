@@ -275,8 +275,9 @@ export function RekapTab({ p }) {
             <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
-            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(Number(e.target.value))} title="Bulan SPP yang ditampilin">
+            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(e.target.value === 'semua' ? 'semua' : Number(e.target.value))} title="Bulan SPP yang ditampilin">
               {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+              <option value="semua">Semua Bulan</option>
             </select>
             <input type="number" className="no-print" style={{ width: 90, margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin" />
             {kelasDetail && (
@@ -379,11 +380,12 @@ export function RekapTab({ p }) {
                         : status === 'cicil'
                         ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
                         : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
+                      const teks = status === 'lunas' ? 'Lunas'
+                        : status === 'cicil' ? `${rpSingkat(val)}, kurang ${rpSingkat(sisa)}`
+                        : target > 0 ? `kurang ${rpSingkat(target)}` : '—';
                       return (
                         <td key={it.kolom} title={tooltip}>
-                          <span className={`status-chip ${status}`}>
-                            {status === 'lunas' ? '✓' : status === 'cicil' ? rpSingkat(val) : '—'}
-                          </span>
+                          <span className={`status-chip ${status}`}>{teks}</span>
                         </td>
                       );
                     })}

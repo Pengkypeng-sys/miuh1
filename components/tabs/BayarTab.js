@@ -5,7 +5,7 @@ import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
 import { BarFill } from '@/components/BarFill';
 import {
-  rp, rpSigned, formatRibuan, targetSebenarnya,
+  rp, rpSigned, rpSingkat, formatRibuan, targetSebenarnya,
   BULAN_LIST, BUKU_KELAS_MAP, PPDB_HARGA_ACUAN, BUKU_HARGA_ACUAN,
 } from '@/lib/format';
 
@@ -41,8 +41,9 @@ export function BayarTab({ p }) {
             <select style={{ width: 'auto', margin: 0 }} value={kelas} onChange={e => setKelas(e.target.value)}>
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
-            <select style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(Number(e.target.value))} title="Bulan SPP yang ditampilin">
+            <select style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(e.target.value === 'semua' ? 'semua' : Number(e.target.value))} title="Bulan SPP yang ditampilin">
               {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+              <option value="semua">Semua Bulan</option>
             </select>
             <input type="number" style={{ width: 90, margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin" />
           </div>
@@ -82,9 +83,12 @@ export function BayarTab({ p }) {
                         : status === 'cicil'
                         ? `Sudah masuk${ketSuffix} ${rp(val)}${target ? `, sisa ${rp(sisa)}` : ''}`
                         : target ? `Belum bayar${ketSuffix} — target ${rp(target)}` : `Belum bayar${ketSuffix}`;
+                      const teks = status === 'lunas' ? 'Lunas'
+                        : status === 'cicil' ? `${rpSingkat(val)}, kurang ${rpSingkat(sisa)}`
+                        : target > 0 ? `kurang ${rpSingkat(target)}` : 'Belum';
                       return (
                         <td key={it.kolom} title={tooltip}>
-                          <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : status === 'cicil' ? 'Nyicil' : 'Belum'}</span>
+                          <span className={`status-chip ${status}`}>{teks}</span>
                         </td>
                       );
                     })}
