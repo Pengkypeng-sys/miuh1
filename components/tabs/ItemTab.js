@@ -215,16 +215,28 @@ export function ItemTab({ p }) {
 
       <SppTargetPanel kelasList={kelasList} />
 
+      {(() => {
+        const groupPpdbAll = itemList.filter(i => i.nama.startsWith('PPDB'));
+        const groupBukuAll = itemList.filter(i => /^BUKU \d/.test(i.nama));
+        if (groupPpdbAll.length === 0 && groupBukuAll.length === 0) return null;
+        return (
+          <div className="panel" style={{ gridColumn: '1 / -1' }}>
+            <div className="panel-title"><span className="ic-badge"><Icon name="layers" size={14} /></span> Varian PPDB & BUKU</div>
+            <div className="panel-desc">Beda harga per gelombang/kelas — dipisah dari list biasa biar gak numpuk</div>
+            <div className="item-manage-list">
+              {groupPpdbAll.length > 0 && <VariantGroup label="PPDB" icon="layers" items={groupPpdbAll} itemList={itemList} rowProps={rowProps} />}
+              {groupBukuAll.length > 0 && <VariantGroup label="BUKU" icon="book" items={groupBukuAll} itemList={itemList} rowProps={rowProps} />}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="panel" style={{ gridColumn: '1 / -1' }}>
         <div className="panel-title"><span className="ic-badge"><Icon name="list" size={14} /></span> Jenis Pembayaran Aktif ({itemList.length})</div>
         <div className="panel-desc">Atur icon, kategori, urutan tampil, atau hapus jenis pembayaran</div>
-        {ITEM_KATEGORI.filter(kat => itemList.some(i => i.nama !== 'SPP' && (i.kategori || 'Lainnya') === kat)).map(kat => {
-          // SPP gak ditampilin di sini — targetnya diatur di panel "Target SPP per Kelas" di atas, bukan di sini.
-          const itemsInKat = itemList.filter(i => i.nama !== 'SPP' && (i.kategori || 'Lainnya') === kat);
-          const groupPpdb = itemsInKat.filter(i => i.nama.startsWith('PPDB'));
-          const groupBuku = itemsInKat.filter(i => /^BUKU \d/.test(i.nama));
-          const grouped = new Set([...groupPpdb, ...groupBuku]);
-          const normalItems = itemsInKat.filter(i => !grouped.has(i));
+        {ITEM_KATEGORI.filter(kat => itemList.some(i => i.nama !== 'SPP' && !i.nama.startsWith('PPDB') && !/^BUKU \d/.test(i.nama) && (i.kategori || 'Lainnya') === kat)).map(kat => {
+          // SPP, PPDB, BUKU gak ditampilin di sini — udah ada panel sendiri di atas.
+          const normalItems = itemList.filter(i => i.nama !== 'SPP' && !i.nama.startsWith('PPDB') && !/^BUKU \d/.test(i.nama) && (i.kategori || 'Lainnya') === kat);
 
           return (
             <div key={kat} style={{ marginBottom: 14 }}>
@@ -233,8 +245,6 @@ export function ItemTab({ p }) {
                 {normalItems.map(i => (
                   <ItemRow key={i.kolom} i={i} idxFlat={itemList.findIndex(x => x.nama === i.nama)} itemList={itemList} {...rowProps} />
                 ))}
-                {groupPpdb.length > 0 && <VariantGroup label="PPDB" icon="layers" items={groupPpdb} itemList={itemList} rowProps={rowProps} />}
-                {groupBuku.length > 0 && <VariantGroup label="BUKU" icon="book" items={groupBuku} itemList={itemList} rowProps={rowProps} />}
               </div>
             </div>
           );
