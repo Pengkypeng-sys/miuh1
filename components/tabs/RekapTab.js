@@ -388,13 +388,16 @@ export function RekapTab({ p }) {
                   <th>Nama Siswa</th>
                   {kelasDetailArr.length > 1 && <th>Kelas</th>}
                   {itemsShown.map(it => <th key={it.kolom}>{it.nama}</th>)}
+                  <th className="no-print">Belum Bayar</th>
                 </tr>
               </thead>
               <tbody>
                 {siswaCocok.length === 0 && (
-                  <tr><td colSpan={itemsShown.length + (kelasDetailArr.length > 1 ? 2 : 1)} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
+                  <tr><td colSpan={itemsShown.length + (kelasDetailArr.length > 1 ? 3 : 2)} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
                 )}
-                {siswaCocok.map(s => (
+                {siswaCocok.map(s => {
+                  const belumBayar = [];
+                  return (
                   <tr key={`${s.kelas}-${s.nama}`}>
                     <td>{s.nama}</td>
                     {kelasDetailArr.length > 1 && <td>{s.kelas}</td>}
@@ -405,6 +408,7 @@ export function RekapTab({ p }) {
                       const status = hitungStatus(val, target);
                       const sisa = target ? target - val : null;
                       const ketSuffix = ket ? ` (${ket})` : '';
+                      if (status !== 'lunas' && target > 0) belumBayar.push(it.nama);
                       const tooltip = status === 'lunas'
                         ? `Lunas${ketSuffix} — ${rp(val)}`
                         : status === 'cicil'
@@ -419,19 +423,25 @@ export function RekapTab({ p }) {
                         </td>
                       );
                     })}
+                    <td className="no-print" style={{ textAlign: 'left', fontSize: 12, color: belumBayar.length ? 'var(--muted)' : '#147a42', fontWeight: belumBayar.length ? 400 : 700 }}>
+                      {belumBayar.length ? belumBayar.join(', ') : 'Lunas semua'}
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               {kelasDetail.siswa.length > 0 && (
                 <tfoot>
                   <tr>
                     <td style={{ fontWeight: 700 }}>TOTAL</td>
+                    {kelasDetailArr.length > 1 && <td />}
                     {itemsShown.map(it => {
                       const totalItem = kelasDetail.siswa
                         .filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase()))
                         .reduce((sum, s) => sum + (Number(s.values[it.kolom]) || 0), 0);
                       return <td key={it.kolom} className="num" style={{ fontWeight: 700 }} title={rp(totalItem)}>{rpSingkat(totalItem)}</td>;
                     })}
+                    <td className="no-print" />
                   </tr>
                 </tfoot>
               )}
