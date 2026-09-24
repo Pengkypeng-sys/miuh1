@@ -56,7 +56,7 @@ export function KasTab({ p }) {
 
   return (
     <div className="bayar-grid">
-      <div className="panel panel-print">
+      <div className="panel panel-print" style={{ gridRow: 'span 2' }}>
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : kas?.modeBulan ? 'Kas per Bulan' : 'Kas Hari Ini'}</div>
