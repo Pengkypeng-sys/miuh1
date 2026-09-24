@@ -17,7 +17,8 @@ export function BayarTab({ p }) {
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
     sppBulananStatus,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
-    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi, setKwitansi, nama,
+    showKwitansiPopup, setShowKwitansiPopup,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
     kelasDetail, loadingDetail, bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
@@ -27,6 +28,33 @@ export function BayarTab({ p }) {
   const [cariSiswaGuru, setCariSiswaGuru] = useState('');
   const [itemFilterGuru, setItemFilterGuru] = useState([]); // [] = semua item; array of kolom (string)
   const [showItemFilterGuru, setShowItemFilterGuru] = useState(false);
+  const [showKwitansiManual, setShowKwitansiManual] = useState(false);
+  const [riwayatList, setRiwayatList] = useState([]);
+  const [loadingRiwayat, setLoadingRiwayat] = useState(false);
+  const [riwayatDipilih, setRiwayatDipilih] = useState([]); // index array
+
+  async function muatRiwayat() {
+    if (!siswa) return;
+    setLoadingRiwayat(true);
+    setRiwayatDipilih([]);
+    const res = await fetch(`/api/riwayat-transaksi?kelas=${encodeURIComponent(kelas)}&siswa=${encodeURIComponent(siswa)}`).then(r => r.json());
+    setRiwayatList(res.transaksi || []);
+    setLoadingRiwayat(false);
+  }
+
+  function buatKwitansiManual() {
+    const dipilih = riwayatDipilih.map(i => riwayatList[i]);
+    if (dipilih.length === 0) return;
+    setKwitansi({
+      siswa, kelas, metode: dipilih[0].metode, petugas: nama,
+      waktu: dipilih.length === 1 ? `${dipilih[0].tanggal} (kwitansi ulang)` : `Rangkuman ${dipilih.length} transaksi (kwitansi ulang)`,
+      items: dipilih.map(t => ({ nama: `${t.item} (${t.tanggal})`, nominal: t.nominal })),
+      total: dipilih.reduce((s, t) => s + t.nominal, 0),
+    });
+    setShowKwitansiManual(false);
+    setShowKwitansiPopup(true);
+  }
+
   const kwitansiRef = useRef(null);
   const [downloadingPng, setDownloadingPng] = useState(false);
   async function downloadKwitansiPng() {
@@ -501,15 +529,52 @@ export function BayarTab({ p }) {
             <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
             <div className="panel-desc">{kwitansi ? `${kwitansi.siswa} — ${kwitansi.kelas}` : 'Belum ada transaksi disimpan sesi ini'}</div>
           </div>
-          {kwitansi && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
-              <button className="secondary action-btn btn-icon" disabled={downloadingPng} onClick={downloadKwitansiPng}>
-                {downloadingPng ? <span className="spinner" /> : <Icon name="save" size={14} />} Download PNG
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {siswa && (
+              <button className="secondary action-btn btn-icon" onClick={() => { setShowKwitansiManual(v => !v); if (!showKwitansiManual) muatRiwayat(); }}>
+                <Icon name="clock" size={14} /> Kwitansi Transaksi Lama
               </button>
-            </div>
-          )}
+            )}
+            {kwitansi && (
+              <>
+                <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
+                <button className="secondary action-btn btn-icon" disabled={downloadingPng} onClick={downloadKwitansiPng}>
+                  {downloadingPng ? <span className="spinner" /> : <Icon name="save" size={14} />} Download PNG
+                </button>
+              </>
+            )}
+          </div>
         </div>
+
+        {showKwitansiManual && (
+          <div className="no-print" style={{ padding: '10px 12px', marginBottom: 14, background: '#f8faf9', border: '1px solid #e2e8e5', borderRadius: 8 }}>
+            <div className="hint-text" style={{ marginTop: 0, marginBottom: 8 }}>
+              Riwayat transaksi {siswa} — centang yang mau dikwitansiin ulang (bisa lebih dari 1)
+            </div>
+            {loadingRiwayat && <div className="hint-text">Memuat...</div>}
+            {!loadingRiwayat && riwayatList.length === 0 && <div className="hint-text">Belum ada riwayat transaksi buat siswa ini</div>}
+            {!loadingRiwayat && riwayatList.length > 0 && (
+              <>
+                <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {riwayatList.map((t, i) => (
+                    <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 400, padding: '4px 2px' }}>
+                      <input
+                        type="checkbox" checked={riwayatDipilih.includes(i)}
+                        onChange={() => setRiwayatDipilih(cur => cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i])}
+                      />
+                      <span style={{ color: 'var(--muted)', minWidth: 90 }}>{t.tanggal}</span>
+                      <span style={{ flex: 1 }}>{t.item}</span>
+                      <b>{rp(t.nominal)}</b>
+                    </label>
+                  ))}
+                </div>
+                <button className="btn-icon" style={{ marginTop: 10, maxWidth: 220 }} disabled={riwayatDipilih.length === 0} onClick={buatKwitansiManual}>
+                  <Icon name="receipt" size={14} /> Buat Kwitansi ({riwayatDipilih.length})
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {!kwitansi && <div className="empty-state no-print">Belum ada kwitansi — muncul otomatis abis simpan pembayaran</div>}
 
@@ -545,6 +610,25 @@ export function BayarTab({ p }) {
           </div>
         )}
       </div>
+
+      {showKwitansiPopup && kwitansi && (
+        <div className="confirm-backdrop" onClick={() => setShowKwitansiPopup(false)}>
+          <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+            <div className="confirm-icon"><Icon name="receipt" size={22} /></div>
+            <h3>Pembayaran Tersimpan</h3>
+            <p>Kwitansi {kwitansi.siswa} udah siap — mau langsung didownload?</p>
+            <div className="confirm-actions">
+              <button className="secondary btn-icon" onClick={() => { setShowKwitansiPopup(false); window.print(); }}>
+                <Icon name="receipt" size={14} /> Download PDF
+              </button>
+              <button className="btn-icon" disabled={downloadingPng} onClick={() => { setShowKwitansiPopup(false); downloadKwitansiPng(); }}>
+                {downloadingPng ? <span className="spinner" /> : <Icon name="save" size={14} />} Download PNG
+              </button>
+            </div>
+            <button className="secondary" style={{ marginTop: 10, width: '100%' }} onClick={() => setShowKwitansiPopup(false)}>Nanti Aja</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

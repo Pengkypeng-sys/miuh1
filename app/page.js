@@ -67,6 +67,7 @@ export default function Home() {
   const [metodeBayar, setMetodeBayar] = useState('Cash');
   const [statusBayar, setStatusBayar] = useState(null);
   const [kwitansi, setKwitansi] = useState(null);
+  const [showKwitansiPopup, setShowKwitansiPopup] = useState(false);
   const [loadingBtn, setLoadingBtn] = useState(false);
   const [itemValues, setItemValues] = useState({});
   const [loadingRingkasan, setLoadingRingkasan] = useState(false);
@@ -116,6 +117,10 @@ export default function Home() {
   const [statusKas, setStatusKas] = useState(null);
   const [tanggalKas, setTanggalKas] = useState(''); // '' = hari ini, 'semua' = semua tanggal, else dd/MM/yyyy
   const [confirmDialog, setConfirmDialog] = useState(null); // {title, message, onConfirm}
+  const [infoPopup, setInfoPopup] = useState(null); // {title, message} — popup ringkas abis nambah/simpan data
+  function popupSukses(title, res) {
+    if (res?.sukses) setInfoPopup({ title, message: res.pesan || 'Berhasil disimpan' });
+  }
 
   const [logData, setLogData] = useState(null);
   const [loadingLog, setLoadingLog] = useState(false);
@@ -293,6 +298,7 @@ export default function Home() {
     setLoadingPengeluaran(false);
     if (cekSessionExpired(res)) return;
     setStatusKas(res);
+    popupSukses('Pengeluaran Tercatat', res);
     if (res.sukses) {
       setKetPengeluaran(''); setNominalPengeluaran(''); setKategoriPengeluaran('Lainnya');
       loadKas();
@@ -378,6 +384,7 @@ export default function Home() {
         items: itemBayar.map(h => ({ nama: h.item, nominal: h.nominalSetor })),
         total: itemBayar.reduce((s, h) => s + h.nominalSetor, 0),
       });
+      setShowKwitansiPopup(true);
     }
 
     setCheckedItems(new Set());
@@ -424,6 +431,7 @@ export default function Home() {
     setLoadingSiswa(false);
     if (cekSessionExpired(res)) return;
     setStatusSiswa(res);
+    popupSukses('Siswa Ditambahkan', res);
     if (res.sukses) {
       setNamaBaru('');
       loadSiswaKelola();
@@ -456,6 +464,7 @@ export default function Home() {
     setLoadingItem(false);
     if (cekSessionExpired(res)) return;
     setStatusItem(res);
+    popupSukses('Jenis Pembayaran Ditambahkan', res);
     if (res.sukses) {
       setNamaItemBaru(''); setTargetItemBaru(''); setKelasItemBaru([]); setIconItemBaru('receipt'); setKategoriItemBaru('Wajib');
       fetch(`/api/item?kelas=${encodeURIComponent(kelas)}`).then(r => r.json()).then(list => { setItemList(list); setKolom(list[0]?.kolom || ''); });
@@ -521,6 +530,7 @@ export default function Home() {
         setLoadingKenaikan(false);
         if (cekSessionExpired(res)) return;
         setStatusKenaikan(res);
+        popupSukses('Kenaikan Kelas Selesai', res);
         if (res.sukses) {
           loadSiswaKelola();
         }
@@ -548,14 +558,15 @@ export default function Home() {
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
   const p = {
-    nama, role, loginInfo,
+    nama, role, loginInfo, popupSukses,
     kelas, setKelas, kelasList, siswa, setSiswa, siswaList,
     ppdbOn, setPpdbOn, ppdbGel, setPpdbGel, ppdbGender, setPpdbGender, ppdbNominal, setPpdbNominal,
     bukuOn, setBukuOn, bukuKelasPilih, setBukuKelasPilih, bukuNominal, setBukuNominal,
     sppOn, setSppOn, sppBulan, setSppBulan, sppNominal, setSppNominal, tabunganOn, setTabunganOn, tabunganNominal, setTabunganNominal,
     sppBulananStatus,
     itemList, checkedItems, toggleCheckedItem, nominalPerItem, setNominalPerItem, modePerItem, setModePerItem,
-    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi,
+    role, metodeBayar, setMetodeBayar, loadingBtn, submitData, statusBayar, kwitansi, setKwitansi,
+    showKwitansiPopup, setShowKwitansiPopup,
     itemValues, loadingRingkasan, kolom, setKolom,
     showPindah, setShowPindah, pindahKeKolom, setPindahKeKolom, pindahNominal, setPindahNominal, loadingPindah, pindahPembayaran, hapusData,
 
@@ -622,6 +633,19 @@ export default function Home() {
       </div>
 
       <ConfirmDialog confirmDialog={confirmDialog} setConfirmDialog={setConfirmDialog} />
+
+      {infoPopup && (
+        <div className="confirm-backdrop" onClick={() => setInfoPopup(null)}>
+          <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+            <div className="confirm-icon"><Icon name="check" size={22} /></div>
+            <h3>{infoPopup.title}</h3>
+            <p>{infoPopup.message}</p>
+            <div className="confirm-actions">
+              <button className="btn-icon" style={{ maxWidth: 160, margin: '0 auto' }} onClick={() => setInfoPopup(null)}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

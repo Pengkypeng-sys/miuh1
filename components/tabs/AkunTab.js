@@ -4,7 +4,7 @@ import { Icon } from '@/lib/icons';
 import { parseUaSingkat } from '@/lib/format';
 
 export function AkunTab({ p }) {
-  const { nama, role, loginInfo } = p;
+  const { nama, role, loginInfo, popupSukses } = p;
   const [passwordLama, setPasswordLama] = useState('');
   const [passwordBaru, setPasswordBaru] = useState('');
   const [passwordKonfirmasi, setPasswordKonfirmasi] = useState('');
@@ -20,6 +20,7 @@ export function AkunTab({ p }) {
     }).then(r => r.json());
     setLoading(false);
     setStatus(res);
+    popupSukses('Password Diubah', res);
     if (res.sukses) { setPasswordLama(''); setPasswordBaru(''); setPasswordKonfirmasi(''); }
   }
 
