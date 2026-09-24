@@ -391,10 +391,10 @@ export function RekapTab({ p }) {
                 </tr>
               </thead>
               <tbody>
-                {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).length === 0 && (
+                {siswaCocok.length === 0 && (
                   <tr><td colSpan={itemsShown.length + (kelasDetailArr.length > 1 ? 2 : 1)} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
                 )}
-                {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).map(s => (
+                {siswaCocok.map(s => (
                   <tr key={`${s.kelas}-${s.nama}`}>
                     <td>{s.nama}</td>
                     {kelasDetailArr.length > 1 && <td>{s.kelas}</td>}
