@@ -40,7 +40,7 @@ export function LogTab({ p }) {
       {!loadingLog && logData && (
         <>
           {logData.dipotong && <div className="status gagal" style={{ marginBottom: 14 }}>Cuma nampilin 200 kejadian terbaru dari {logData.total} total — persempit tanggal buat lihat lebih detail.</div>}
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ maxHeight: 480, overflowY: 'auto' }}>
             <table>
               <thead><tr><th>Jam</th><th>Aksi</th><th>User</th><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Lama → Baru</th><th>Metode</th></tr></thead>
               <tbody>

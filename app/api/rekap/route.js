@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST, fetchAllLogAktivitas } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, fetchAllLogAktivitas, fetchAllRows } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
@@ -86,9 +86,7 @@ export async function GET(req) {
 
     if (siswaRows.length > 0) {
       const siswaIds = siswaRows.map(s => s.id);
-      const pembayaranRows = throwIfError(
-        await db().from('pembayaran').select('siswa_id, item_id, nominal, keterangan, terakhir_diisi').in('siswa_id', siswaIds)
-      );
+      const pembayaranRows = await fetchAllRows('pembayaran', 'siswa_id, item_id, nominal, keterangan, terakhir_diisi', q => q.in('siswa_id', siswaIds));
 
       const paymentsBySiswa = {};
       pembayaranRows.forEach(p => {

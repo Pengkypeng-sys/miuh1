@@ -185,7 +185,7 @@ export function KasTab({ p }) {
 
             <details className="collapsible" style={{ marginBottom: 12 }}>
               <summary>Detail Transaksi Masuk ({kas.transaksiMasuk.length})</summary>
-              <div className="table-wrap">
+              <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
                 <table>
                   <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Jam</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
                   <tbody>
@@ -200,7 +200,7 @@ export function KasTab({ p }) {
 
             <details className="collapsible">
               <summary>Detail Pengeluaran ({kas.transaksiKeluar.length})</summary>
-              <div className="table-wrap">
+              <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
                 <table>
                   <thead><tr>{kas.semua && <th>Tanggal</th>}<th>Keterangan</th><th>Kategori</th><th>Dicatat</th><th className="num">Rp</th></tr></thead>
                   <tbody>

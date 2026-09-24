@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST, targetSppKelas } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, targetSppKelas, fetchAllRows } from '@/lib/db';
 import { getSession, kelasDiizinkan } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { BULAN_LIST } from '@/lib/format';
@@ -46,10 +46,10 @@ export async function GET(req) {
 
     const siswaIds = siswaRows.map(s => s.id);
     const [pembayaranRows, sppRows] = await Promise.all([
-      db().from('pembayaran').select('siswa_id, item_id, nominal, keterangan').in('siswa_id', siswaIds).then(r => throwIfError(r)),
+      fetchAllRows('pembayaran', 'siswa_id, item_id, nominal, keterangan', q => q.in('siswa_id', siswaIds)),
       semuaBulan
-        ? db().from('spp_bulanan').select('siswa_id, bulan, nominal').in('siswa_id', siswaIds).eq('tahun', tahunSpp).then(r => throwIfError(r))
-        : db().from('spp_bulanan').select('siswa_id, nominal').in('siswa_id', siswaIds).eq('tahun', tahunSpp).eq('bulan', bulanSpp).then(r => throwIfError(r)),
+        ? fetchAllRows('spp_bulanan', 'siswa_id, bulan, nominal', q => q.in('siswa_id', siswaIds).eq('tahun', tahunSpp))
+        : fetchAllRows('spp_bulanan', 'siswa_id, nominal', q => q.in('siswa_id', siswaIds).eq('tahun', tahunSpp).eq('bulan', bulanSpp)),
     ]);
 
     const bySiswa = {};
