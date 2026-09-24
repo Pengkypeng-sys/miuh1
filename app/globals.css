@@ -474,8 +474,13 @@
 @media print {
   @page { size: landscape; margin: 14mm 10mm; }
   .no-print, .sidebar, .main-topbar, .mobile-menu-btn, .stat-grid, .panel:not(:has(.matrix-table)):not(.panel-print) { display: none !important; }
-  .app-shell, .main, .main-content { display: block !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+  .app-shell, .main, .main-content, .bayar-grid { display: block !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
   .panel { box-shadow: none !important; border: none !important; padding: 0 !important; break-inside: avoid; }
+  /* Semua panel-print (Kas, Kwitansi) kepake gridColumn buat posisi di layar 2-kolom — pas print
+     kolomnya udah gak ada (bayar-grid jadi block), jadi harus direset biar gak ninggalin ruang kosong */
+  .panel-print { grid-column: auto !important; }
+  /* Kwitansi doang yang perlu dibikin sempit & ditengahin, panel Kas lain tetep full-width */
+  .kwitansi-print { max-width: 480px; margin: 0 auto; }
   .panel-header, .panel-desc { display: none !important; }
   .print-only { display: flex; }
   .print-only-siswa { display: block; }

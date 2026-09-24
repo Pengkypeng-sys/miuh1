@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
@@ -27,6 +27,24 @@ export function BayarTab({ p }) {
   const [cariSiswaGuru, setCariSiswaGuru] = useState('');
   const [itemFilterGuru, setItemFilterGuru] = useState([]); // [] = semua item; array of kolom (string)
   const [showItemFilterGuru, setShowItemFilterGuru] = useState(false);
+  const kwitansiRef = useRef(null);
+  const [downloadingPng, setDownloadingPng] = useState(false);
+  async function downloadKwitansiPng() {
+    if (!kwitansiRef.current) return;
+    setDownloadingPng(true);
+    // .print-kop (kop sekolah) defaultnya display:none di layar, cuma nongol pas print — nyalain
+    // sementara biar ikut kefoto, matiin lagi abis selesai.
+    const kop = kwitansiRef.current.querySelector('.print-kop');
+    if (kop) kop.style.display = 'flex';
+    const html2canvas = (await import('html2canvas')).default;
+    const canvas = await html2canvas(kwitansiRef.current, { scale: 2, backgroundColor: '#ffffff' });
+    if (kop) kop.style.display = '';
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `kwitansi-${kwitansi?.siswa || 'siswa'}.png`;
+    a.click();
+    setDownloadingPng(false);
+  }
 
   // Wali kelas (role guru): akun read-only, cuma pilih kelas terus liat tabel semua siswa x status
   // lunas/belum lunas sekaligus — gak perlu klik satu-satu, gak ada akses input/edit pembayaran.
@@ -135,7 +153,7 @@ export function BayarTab({ p }) {
 
   return (
     <div className="bayar-grid">
-      <div className="panel">
+      <div className="panel" style={{ gridRow: 'span 2' }}>
         <div className="panel-title"><span className="ic-badge"><Icon name="edit" size={14} /></span> Input Pembayaran</div>
         <div className="panel-desc">Centang item yang dibayar (bisa lebih dari 1), isi nominalnya, pilih metode</div>
 
@@ -477,19 +495,26 @@ export function BayarTab({ p }) {
         )}
       </div>
 
-      <div className="panel panel-print" style={{ gridColumn: 2 }}>
+      <div className="panel panel-print kwitansi-print" style={{ gridColumn: 2 }}>
         <div className="panel-header no-print">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
             <div className="panel-desc">{kwitansi ? `${kwitansi.siswa} — ${kwitansi.kelas}` : 'Belum ada transaksi disimpan sesi ini'}</div>
           </div>
-          {kwitansi && <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>}
+          {kwitansi && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
+              <button className="secondary action-btn btn-icon" disabled={downloadingPng} onClick={downloadKwitansiPng}>
+                {downloadingPng ? <span className="spinner" /> : <Icon name="save" size={14} />} Download PNG
+              </button>
+            </div>
+          )}
         </div>
 
         {!kwitansi && <div className="empty-state no-print">Belum ada kwitansi — muncul otomatis abis simpan pembayaran</div>}
 
         {kwitansi && (
-          <>
+          <div ref={kwitansiRef} style={{ background: '#fff' }}>
             <div className="print-only print-kop">
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>
@@ -517,7 +542,7 @@ export function BayarTab({ p }) {
                 </tfoot>
               </table>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
