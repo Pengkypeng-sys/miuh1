@@ -1,151 +1,188 @@
-# Dashboard Pembayaran Siswa — MI Unwanul Huda 1
+<div align="center">
 
-Dashboard web buat kelola pembayaran siswa (SPP, PPDB, BUKU, dll) langsung terhubung ke Google Sheets — gak perlu buka spreadsheet manual, gak perlu database terpisah. Google Sheet yang udah ada tetep jadi sumber data satu-satunya.
+# 💳 Dashboard Pembayaran Siswa
+### MI Unwanul Huda 1
 
-**Live:** https://miuh1.vercel.app
+Kelola SPP, PPDB, BUKU, dan pembayaran lainnya dari satu tempat — tanpa spreadsheet manual, tanpa catatan kertas.
+
+[![Live](https://img.shields.io/badge/live-miuh1.vercel.app-1a7a4c?style=for-the-badge)](https://miuh1.vercel.app)
+![Next.js](https://img.shields.io/badge/Next.js%2014-black?style=flat-square&logo=next.js)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-black?style=flat-square&logo=vercel)
+
+</div>
 
 ---
 
-## Fitur
+## ✨ Kenapa dashboard ini
 
-- **Login berbasis role** — admin (akses penuh) vs staf (input pembayaran doang), password ter-hash SHA-256
-- **Input pembayaran multi-item** — centang beberapa item sekaligus (SPP + BUKU dalam satu transaksi), plus metode bayar (Cash/Transfer/QRIS)
-- **Sistem cicilan** — tiap item punya target harga, submit berikutnya nambah ke total (bukan menimpa), status otomatis: belum bayar / nyicil / lunas
-- **Koreksi & pindah pembayaran** — admin bisa timpa nilai langsung (buat salah input) atau pindahkan nominal ke item lain (buat salah pilih item)
-- **Kelola siswa** — tambah/hapus siswa per kelas, cari nama, urut A-Z otomatis
-- **Kelola jenis pembayaran** — admin bisa tambah/hapus jenis pembayaran baru, otomatis nambah kolom di semua sheet kelas
-- **Rekap & statistik** — persentase lunas per kelas, tabel matriks siswa × item, rekap per jenis pembayaran, laporan bisa dicetak/disimpan PDF
-- **Keuangan harian** — uang masuk (dari pembayaran) vs uang keluar (dicatat manual), saldo harian, bisa lihat tanggal tertentu atau semua tanggal
-- **Log aktivitas** — riwayat semua perubahan data (siapa, kapan, aksi apa), bisa difilter per tanggal
-- **Mobile-friendly** — sidebar jadi menu hamburger di layar kecil
+Sekolah butuh catatan pembayaran yang **akurat, cepat, dan bisa dipantau siapa saja yang punya akses** — admin tata usaha, staf pengajar, sampai wali kelas — tanpa saling tunggu giliran buka satu file Excel yang sama.
 
-## Tech Stack
+- 🔒 **3 level akses** — admin (kontrol penuh), staf (input pembayaran), wali kelas (lihat status per kelas, gak bisa ubah data)
+- 💰 **Pembayaran fleksibel** — dari item sekali bayar (PPDB, BUKU) sampai SPP bulanan dengan target beda per kelas dan pengecualian siswa yatim
+- 📊 **Rekap real-time** — status lunas/nyicil/belum langsung kelihatan, per kelas maupun per siswa, bisa diekspor ke Excel
+- 🧾 **Kwitansi & laporan siap cetak** — laporan bulanan format sekolah, kwitansi per transaksi, cetak per siswa
+- 📱 **Jalan di HP** — dari layar admin gede sampai HP jadul, tetep enak dipakai
 
-- **Next.js 14** (App Router) — frontend + API routes jadi satu
-- **Google Sheets API** (`googleapis`) — baca/tulis langsung ke spreadsheet, gak ada database lain
-- **JWT** (`jsonwebtoken`) — session login, disimpan di cookie httpOnly
-- Gak ada UI framework — CSS custom polos (`app/globals.css`)
+---
 
-## Struktur Google Sheet
+## 🧩 Fitur
 
-| Sheet | Isi |
+| Kategori | Yang bisa dilakukan |
 |---|---|
-| `KELAS 1` – `KELAS 6` | Kolom A = nama siswa, kolom B dst = nominal per item pembayaran (angka kumulatif), kolom terakhir = "Terakhir Diisi" |
-| `Users` | username, password (hash SHA-256), nama tampilan, role (`admin`/`staf`) |
-| `TargetHarga` | nama item, target nominal — dibuat otomatis |
-| `Log` | riwayat semua aksi (waktu, user, aksi, kelas, siswa, item, nilai lama, nilai baru, metode) — dibuat otomatis |
-| `Pengeluaran` | tanggal, keterangan, nominal, dicatat oleh — dibuat otomatis |
+| **Pembayaran** | Input multi-item sekaligus, metode Cash/Transfer/QRIS, sistem cicilan otomatis (belum bayar → nyicil → lunas), koreksi & pindah nominal antar item |
+| **SPP Bulanan** | Target beda per kelas, kunci checkbox bulan yang udah lunas, siswa yatim otomatis gratis, backfill data lama |
+| **Kelola Data** | Tambah/hapus siswa, tambah jenis pembayaran baru (otomatis kepake semua kelas atau kelas tertentu), kenaikan kelas tahunan 1 klik |
+| **Rekap & Laporan** | Dashboard ringkasan seluruh kelas, tabel matriks siswa × item, drill-down per item & bulan, laporan bulanan format sekolah (Excel), export Excel siap cetak |
+| **Keuangan Harian** | Uang masuk otomatis dari pembayaran, uang keluar dicatat manual, saldo harian, trend 7 hari |
+| **Wali Kelas** | Akun read-only, langsung lihat semua siswa sekelas + status bayar, tanpa resiko kesalahan input |
+| **Keamanan** | Password ter-hash, session JWT, role dicek di server, lockout setelah percobaan login gagal berulang |
+| **Audit** | Log aktivitas lengkap — siapa, kapan, ubah apa dari nilai berapa ke berapa |
 
-Sheet `TargetHarga`, `Log`, dan `Pengeluaran` otomatis kebuat pas pertama kali dibutuhkan — gak perlu bikin manual.
+---
 
-## Setup Lokal
+## 🛠️ Tech Stack
 
-### 1. Install dependency
+| | |
+|---|---|
+| **Framework** | [Next.js 14](https://nextjs.org) (App Router) — frontend & API jadi satu |
+| **Database** | [Supabase](https://supabase.com) (Postgres), diakses lewat service role key — gak ada akses langsung dari browser |
+| **Auth** | JWT ([`jsonwebtoken`](https://npmjs.com/package/jsonwebtoken)) di cookie httpOnly |
+| **Excel** | [`exceljs`](https://npmjs.com/package/exceljs) — laporan & export beneran `.xlsx`, bukan CSV nyamar |
+| **Animasi** | [`motion`](https://motion.dev) |
+| **Styling** | Tailwind CSS, custom di `app/globals.css` |
+| **Deploy** | [Vercel](https://vercel.com), cron job mingguan buat backup otomatis |
+
+---
+
+## 🗄️ Struktur Database
+
+```
+users              → akun login (admin / staf / guru), password ter-hash
+siswa              → data siswa per kelas, flag "yatim" buat SPP gratis
+item_pembayaran    → daftar jenis pembayaran (SPP, PPDB, BUKU, dst), target harga, kelas_scope
+pembayaran         → nominal per siswa per item (kumulatif, bukan riwayat transaksi)
+spp_bulanan        → tracking SPP per bulan per siswa (terpisah dari pembayaran biasa)
+spp_target         → target SPP per kelas, bisa beda tiap tahun ajaran
+log_aktivitas      → audit trail semua perubahan data
+pengeluaran        → catatan uang keluar
+riwayat_siswa      → snapshot jumlah siswa per tahun ajaran (buat grafik trend)
+```
+
+Skema lengkap ada di `supabase-schema.sql` + migrasi tambahan (`supabase-*.sql`) — dijalankan berurutan sekali di Supabase SQL Editor.
+
+---
+
+## 🚀 Setup Lokal
+
+**1. Install dependency**
 
 ```bash
 npm install
 ```
 
-### 2. Bikin Service Account Google Cloud
+**2. Bikin project Supabase**
 
-1. Buka [console.cloud.google.com](https://console.cloud.google.com) → bikin project baru
-2. Aktifkan **Google Sheets API** (search di search bar → Enable)
-3. **IAM & Admin → Service Accounts → Create Service Account**
-4. Klik service account yang baru → tab **Keys → Add Key → Create new key → JSON** → download
-5. Buka spreadsheet target → **Share** → tempel email service account (`xxx@xxx.iam.gserviceaccount.com`) dari file JSON → kasih akses **Editor**
+Buat project baru di [supabase.com](https://supabase.com), lalu jalankan seluruh isi `supabase-schema.sql` (dan file `supabase-*.sql` lainnya berurutan) di **SQL Editor**.
 
-### 3. Isi environment variables
+**3. Isi environment variables**
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-Isi `.env.local`:
-
-```
-SPREADSHEET_ID=<id dari URL spreadsheet>
-GOOGLE_SERVICE_ACCOUNT_EMAIL=<client_email dari file JSON>
-GOOGLE_PRIVATE_KEY="<private_key dari file JSON, apa adanya termasuk \n>"
+```env
+SUPABASE_URL=<Project URL dari Supabase Settings → API>
+SUPABASE_SERVICE_ROLE_KEY=<service_role key — RAHASIA, jangan expose ke client>
 JWT_SECRET=<random string, generate: openssl rand -hex 32>
 ```
 
-### 4. Bikin akun pertama
+**4. Bikin akun admin pertama**
 
-Spreadsheet perlu sheet `Users` dengan minimal 1 baris admin. Kolom: `username | password (hash SHA-256) | nama | role`. Hash password bisa digenerate lewat Node:
-
-```bash
-node -e "console.log(require('crypto').createHash('sha256').update('password-kamu').digest('hex'))"
+```sql
+insert into users (username, password_hash, nama, role)
+values ('admin', encode(digest('password-kamu', 'sha256'), 'hex'), 'Admin', 'admin');
 ```
 
-### 5. Jalankan
+**5. Jalankan**
 
 ```bash
 npm run dev
 ```
 
-Buka [localhost:3000](http://localhost:3000).
+Buka [localhost:3000](http://localhost:3000). 🎉
 
-## Masa Aktif / Lisensi
+---
 
-Dashboard ini berjalan sebagai layanan berbayar dengan masa aktif terbatas, diatur di `lib/license.js`:
+## 🎮 Mode Demo
 
-```js
-export const LICENSE_START = '2026-07-13';
-export const LICENSE_EXPIRY = '2026-08-13';
+Coba tampilan tanpa data asli — set `DEMO_MODE=1` di `.env.local`. Gak ada tulisan yang nyangkut ke database.
+
+```
+username: admin   password: 1234   → role admin
+username: staf    password: 1234   → role staf
 ```
 
-**Cara kerjanya:**
-- **H-7 sebelum expired** — banner peringatan kuning muncul di dashboard: "Masa aktif tinggal N hari"
-- **Setelah tanggal expiry lewat** — dashboard terkunci total buat semua user (termasuk admin). Login baru ditolak, dan session yang lagi aktif otomatis logout paksa saat halaman di-refresh
-- Data di Google Sheet **tidak terpengaruh** — cuma akses lewat dashboard yang dikunci, staf sekolah tetap bisa buka spreadsheet-nya langsung kalau darurat
+---
 
-**Perpanjang masa aktif:**
-1. Edit `LICENSE_EXPIRY` di `lib/license.js` ke tanggal baru (format `YYYY-MM-DD`)
-2. Commit & push — Vercel otomatis redeploy dan dashboard langsung kebuka lagi
+## ☁️ Deploy ke Vercel
 
-## Mode Demo
+1. Push repo ke GitHub
+2. Import di [vercel.com/new](https://vercel.com/new)
+3. Isi environment variables yang sama (**jangan** set `DEMO_MODE`)
+4. Deploy — cron backup mingguan otomatis jalan lewat `vercel.json`
 
-Set `DEMO_MODE=1` di `.env.local` buat coba tampilan pakai data dummy — gak nulis apa pun ke spreadsheet asli. Login: `admin`/`1234` (role admin) atau `staf`/`1234` (role staf).
+---
 
-## Deploy ke Vercel
-
-1. Push repo ini ke GitHub
-2. Import project di [vercel.com/new](https://vercel.com/new)
-3. Isi 4 environment variables yang sama kayak di atas (**jangan** set `DEMO_MODE`)
-4. Deploy
-
-## Struktur Project
+## 📁 Struktur Project
 
 ```
 app/
-  api/            → semua backend logic (route.js per endpoint)
-    kelas/        → daftar kelas
-    siswa/        → CRUD siswa
-    item/         → CRUD jenis pembayaran
-    payment/      → submit/hapus pembayaran, + payment/pindah, payment/row
-    kas/          → keuangan harian (masuk/keluar)
-    log/          → riwayat aktivitas
-    rekap/        → statistik agregat
-    kelas-detail/ → tabel matriks siswa × item
+  api/
+    payment/          → submit, koreksi, pindah pembayaran
+    spp-bulanan/       → status & backfill SPP per bulan
+    spp-target/        → target SPP per kelas (editable admin)
+    kelas-detail/      → tabel matriks siswa × item per kelas
+    rekap/              → statistik agregat buat dashboard
+    rekap-item-bulan/  → drill-down 1 item di 1 bulan
+    laporan-bulanan/    → generate Excel laporan bulanan
+    bayar-excel/        → export Excel transaksi harian
+    kas/                → keuangan harian
+    kenaikan-kelas/     → naikkan seluruh siswa 1 tingkat
+    log/                → riwayat aktivitas
     login/logout/session/ → autentikasi
-  page.js         → seluruh UI (single-page, client component)
-  globals.css     → semua styling
+  page.js               → shell utama (state, routing tab)
+components/
+  tabs/                 → 1 file per tab (Bayar, Rekap, Siswa, Item, Kas, Log, Kenaikan, Akun)
 lib/
-  sheets.js       → wrapper Google Sheets API (baca/tulis/format sel)
-  auth.js         → hash password, JWT, cookie session
-  log.js          → pencatat audit log
-  target.js       → logic status lunas/nyicil/belum
-  icons.js        → ikon SVG inline
-  demoData.js     → data dummy buat DEMO_MODE
+  db.js                 → koneksi Supabase, helper pagination, kenaikan kelas
+  auth.js               → hash password, JWT, cookie session, kontrol akses kelas
+  target.js             → logic status lunas/nyicil/belum
+  format.js              → helper format angka/tanggal, konstanta target
+  laporanBulanan.js       → generator Excel laporan bulanan
+  backup.js               → backup mingguan ke Supabase Storage
 ```
 
-## Keamanan
+---
 
-- Password di-hash SHA-256 (satu arah, gak ada plaintext di sheet)
-- Session pakai JWT httpOnly cookie, expired 6 jam
-- Role admin/staf dicek di server (bukan cuma disembunyikan di UI)
-- **Belum ada:** rate limiting request, 2FA. Buat skala 1 sekolah dianggap cukup — kalau mau expand, pertimbangkan restrict akses Vercel/Google Workspace kalau sekolah punya domain organisasi
+## 🔐 Keamanan
 
-## Kenapa Google Sheets, Bukan Database?
+- Password di-hash SHA-256, gak ada plaintext tersimpan
+- Session JWT httpOnly cookie, expired 6 jam
+- Role dicek di **server**, bukan cuma disembunyikan di UI
+- Lockout otomatis setelah 5x percobaan login gagal dalam 10 menit
+- Wali kelas: role read-only, semua endpoint tulis nolak eksplisit di server (bukan cuma disembunyiin tombolnya)
 
-Staf sekolah udah familiar sama spreadsheet — kalau app ini down atau ada kebutuhan darurat, data tetap bisa diakses & diedit langsung dari Google Sheets tanpa perlu bergantung ke aplikasi ini. Trade-off: lebih lambat dibanding database asli, dan kena limit rate Google Sheets API (60 read/menit per user) — makanya beberapa endpoint dioptimasi buat baca sekali per aksi, bukan per baris.
+---
+
+## 💡 Kenapa Supabase, Bukan Google Sheets?
+
+Versi awal dashboard ini pakai Google Sheets sebagai database, tapi kena limit rate API dan makin lambat seiring data nambah. Supabase (Postgres) kasih query yang jauh lebih cepat dan bisa nampung ribuan baris tanpa lag — cocok buat sekolah yang datanya terus tumbuh tiap tahun ajaran.
+
+<div align="center">
+
+---
+
+Dibuat untuk **MI Unwanul Huda 1**
+
+</div>
