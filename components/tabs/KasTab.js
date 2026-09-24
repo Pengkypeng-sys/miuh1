@@ -218,6 +218,29 @@ export function KasTab({ p }) {
 
       {role === 'admin' && (
         <div className="panel no-print">
+          <div className="panel-title"><span className="ic-badge"><Icon name="minus" size={14} /></span> Catat Pengeluaran</div>
+          <div className="panel-desc">Tercatat otomatis tanggal hari ini</div>
+
+          <label>Keterangan</label>
+          <input value={ketPengeluaran} onChange={e => setKetPengeluaran(e.target.value)} placeholder="contoh: Beli ATK kantor" />
+
+          <label>Kategori</label>
+          <select value={kategoriPengeluaran} onChange={e => setKategoriPengeluaran(e.target.value)}>
+            {KATEGORI_PENGELUARAN.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
+
+          <label>Nominal</label>
+          <input type="text" inputMode="numeric" value={nominalPengeluaran} onChange={e => setNominalPengeluaran(formatRibuan(e.target.value))} placeholder="contoh: 150.000" />
+
+          <button disabled={loadingPengeluaran} className="danger btn-icon" onClick={tambahPengeluaran}>
+            {loadingPengeluaran ? <span className="spinner" /> : <Icon name="minus" size={15} />} Catat Pengeluaran
+          </button>
+          {statusKas && <div className={`status ${statusKas.sukses ? 'sukses' : 'gagal'}`}>{statusKas.pesan}</div>}
+        </div>
+      )}
+
+      {role === 'admin' && (
+        <div className="panel no-print">
           <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Laporan Bulanan (format sekolah)</div>
           <div className="panel-desc">Excel — sheet Pengeluaran + 1 sheet per item pemasukan yang dicentang, sama format kayak laporan manual yang biasa dibikin</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
@@ -306,28 +329,6 @@ export function KasTab({ p }) {
         </div>
       )}
 
-      {role === 'admin' && (
-        <div className="panel no-print">
-          <div className="panel-title"><span className="ic-badge"><Icon name="minus" size={14} /></span> Catat Pengeluaran</div>
-          <div className="panel-desc">Tercatat otomatis tanggal hari ini</div>
-
-          <label>Keterangan</label>
-          <input value={ketPengeluaran} onChange={e => setKetPengeluaran(e.target.value)} placeholder="contoh: Beli ATK kantor" />
-
-          <label>Kategori</label>
-          <select value={kategoriPengeluaran} onChange={e => setKategoriPengeluaran(e.target.value)}>
-            {KATEGORI_PENGELUARAN.map(k => <option key={k} value={k}>{k}</option>)}
-          </select>
-
-          <label>Nominal</label>
-          <input type="text" inputMode="numeric" value={nominalPengeluaran} onChange={e => setNominalPengeluaran(formatRibuan(e.target.value))} placeholder="contoh: 150.000" />
-
-          <button disabled={loadingPengeluaran} className="danger btn-icon" onClick={tambahPengeluaran}>
-            {loadingPengeluaran ? <span className="spinner" /> : <Icon name="minus" size={15} />} Catat Pengeluaran
-          </button>
-          {statusKas && <div className={`status ${statusKas.sukses ? 'sukses' : 'gagal'}`}>{statusKas.pesan}</div>}
-        </div>
-      )}
     </div>
   );
 }
