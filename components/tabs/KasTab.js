@@ -270,60 +270,62 @@ export function KasTab({ p }) {
 
       {kas && kas.rekapBulanan && (
         <div className="panel panel-print">
-          <details className="collapsible">
-            <summary className="panel-title"><span className="ic-badge"><Icon name="chart" size={14} /></span> Rekap Keuangan Bulanan</summary>
-            <div className="panel-desc no-print" style={{ marginBottom: 10 }}>Masuk, keluar & saldo per bulan — 6 bulan terakhir</div>
-            <div className="toolbar no-print" style={{ marginBottom: 14 }}>
+          <div className="panel-header">
+            <div>
+              <div className="panel-title"><span className="ic-badge"><Icon name="chart" size={14} /></span> Rekap Keuangan Bulanan</div>
+              <div className="panel-desc">Masuk, keluar & saldo per bulan — 6 bulan terakhir</div>
+            </div>
+            <div className="toolbar no-print">
               <button className="secondary action-btn btn-icon" onClick={downloadCsvBulanan}><Icon name="list" size={14} /> Export Excel (CSV)</button>
               <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Download PDF</button>
             </div>
+          </div>
 
-            <div className="print-only print-kop">
-              <img src="/logo-mi.png" alt="Logo" className="print-kop-logo" />
-              <div>
-                <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-                <div className="print-kop-judul">Rekap Keuangan Bulanan</div>
-                <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</div>
-              </div>
+          <div className="print-only print-kop">
+            <img src="/logo-mi.png" alt="Logo" className="print-kop-logo" />
+            <div>
+              <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+              <div className="print-kop-judul">Rekap Keuangan Bulanan</div>
+              <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</div>
             </div>
+          </div>
 
-            <div className="no-print" style={{ marginBottom: 20 }}>
-              <div className="trend-sparkline">
-                {(() => {
-                  const max = Math.max(1, ...kas.rekapBulanan.map(b => Math.abs(b.saldo)));
-                  return kas.rekapBulanan.map((b, i) => (
-                    <div key={i} className="trend-bar-col" title={`${b.bulan}: ${rpSigned(b.saldo)}`}>
-                      <div className={`trend-bar ${b.saldo >= 0 ? 'in' : 'out'}`} style={{ height: `${Math.max(4, (Math.abs(b.saldo) / max) * 48)}px` }} />
-                      <div className="trend-bar-label">{b.bulan}</div>
-                    </div>
-                  ));
-                })()}
-              </div>
+          <div className="no-print" style={{ marginBottom: 20 }}>
+            <div className="trend-sparkline">
+              {(() => {
+                const max = Math.max(1, ...kas.rekapBulanan.map(b => Math.abs(b.saldo)));
+                return kas.rekapBulanan.map((b, i) => (
+                  <div key={i} className="trend-bar-col" title={`${b.bulan}: ${rpSigned(b.saldo)}`}>
+                    <div className={`trend-bar ${b.saldo >= 0 ? 'in' : 'out'}`} style={{ height: `${Math.max(4, (Math.abs(b.saldo) / max) * 48)}px` }} />
+                    <div className="trend-bar-label">{b.bulan}</div>
+                  </div>
+                ));
+              })()}
             </div>
+          </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Bulan</th><th className="num">Uang Masuk</th><th className="num">Uang Keluar</th><th className="num">Saldo</th></tr></thead>
-                <tbody>
-                  {kas.rekapBulanan.map((b, i) => (
-                    <tr key={i}>
-                      <td>{b.bulan}</td>
-                      <td className="num">{rp(b.masuk)}</td>
-                      <td className="num" title={b.perKategori?.map(k => `${k.kategori}: ${rp(k.total)}`).join(' • ') || ''}>
-                        {rp(b.keluar)}
-                        {b.perKategori?.length > 0 && (
-                          <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
-                            {b.perKategori.map(k => `${k.kategori} ${rpSingkat(k.total)}`).join(', ')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="num" style={{ fontWeight: 700 }}>{rpSigned(b.saldo)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Bulan</th><th className="num">Uang Masuk</th><th className="num">Uang Keluar</th><th className="num">Saldo</th></tr></thead>
+              <tbody>
+                {kas.rekapBulanan.map((b, i) => (
+                  <tr key={i}>
+                    <td>{b.bulan}</td>
+                    <td className="num">{rp(b.masuk)}</td>
+                    <td className="num" title={b.perKategori?.map(k => `${k.kategori}: ${rp(k.total)}`).join(' • ') || ''}>
+                      {rp(b.keluar)}
+                      {b.perKategori?.length > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>
+                          {b.perKategori.map(k => `${k.kategori} ${rpSingkat(k.total)}`).join(', ')}
+                        </div>
+                      )}
+                    </td>
+                    <td className="num" style={{ fontWeight: 700 }}>{rpSigned(b.saldo)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
