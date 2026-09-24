@@ -504,7 +504,7 @@ export function RekapTab({ p }) {
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
             <table><thead><tr><th>Item</th><th className="num">Terisi</th><th className="num">Total Rp</th></tr></thead>
               <tbody>
                 {rekap?.perItem.filter(i => i.nama !== 'TABUNGAN WAJIB').map(i => (
