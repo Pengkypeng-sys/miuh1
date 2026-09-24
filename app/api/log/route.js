@@ -23,7 +23,7 @@ export async function GET(req) {
 
   try {
     const rows = throwIfError(
-      await db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').order('waktu', { ascending: false })
+      await db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').order('waktu', { ascending: false }).limit(20000)
     );
 
     let entries = rows

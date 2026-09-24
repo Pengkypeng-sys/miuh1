@@ -16,7 +16,7 @@ export async function POST() {
 
   try {
     const [logRows, siswaRows] = await Promise.all([
-      db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru').then(r => throwIfError(r)),
+      db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru').limit(20000).then(r => throwIfError(r)),
       db().from('siswa').select('id, nama, kelas').then(r => throwIfError(r)),
     ]);
 

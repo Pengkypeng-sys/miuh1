@@ -25,7 +25,7 @@ export async function GET(req) {
   }
 
   try {
-    const logRows = throwIfError(await db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru'));
+    const logRows = throwIfError(await db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru').limit(20000));
 
     const perKelasMap = {}; // kelas -> { total, siswaMap: { nama -> { total, tanggalTerakhir } } }
     let total = 0;

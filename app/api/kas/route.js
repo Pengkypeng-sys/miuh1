@@ -145,7 +145,7 @@ export async function GET(req) {
 
   try {
     const [logRows, pengeluaranRows] = await Promise.all([
-      db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').then(r => throwIfError(r)),
+      db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').limit(20000).then(r => throwIfError(r)),
       db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh, kategori').then(r => throwIfError(r)),
     ]);
 
