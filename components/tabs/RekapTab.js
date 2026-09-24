@@ -59,15 +59,9 @@ export function RekapTab({ p }) {
   }
 
   function downloadCsvBayar() {
-    const bayarCocok = (rekap?.bayarHariIni || []).filter(b => !itemBayarFilter || b.item === itemBayarFilter);
-    const header = 'Kelas,Siswa,Item,Rp\n';
-    const rows = bayarCocok.map(b => [b.kelas, b.siswa, b.item, b.nominal].join(',')).join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `bayar-${itemBayarFilter || 'semua'}-${tanggalBayarFilter || 'hari-ini'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const tgl = tanggalBayarFilter || new Date().toISOString().slice(0, 10).split('-').reverse().join('/');
+    const qs = new URLSearchParams({ tanggal: tgl, item: itemBayarFilter || '' });
+    window.location.href = `/api/bayar-excel?${qs.toString()}`;
   }
 
   function downloadCsvSiswa(items) {
@@ -533,7 +527,7 @@ export function RekapTab({ p }) {
                 value={tanggalBayarFilter ? ddmmyyyyToIso(tanggalBayarFilter) : new Date().toISOString().slice(0, 10)}
                 onChange={e => setTanggalBayarFilter(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
               />
-              <button className="secondary action-btn btn-icon" onClick={downloadCsvBayar}><Icon name="list" size={14} /> Download CSV</button>
+              <button className="secondary action-btn btn-icon" onClick={downloadCsvBayar}><Icon name="list" size={14} /> Download Excel</button>
             </div>
           </div>
           {(() => {
