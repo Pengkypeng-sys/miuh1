@@ -514,8 +514,8 @@ export function BayarTab({ p }) {
         {!kwitansi && <div className="empty-state no-print">Belum ada kwitansi — muncul otomatis abis simpan pembayaran</div>}
 
         {kwitansi && (
-          <div ref={kwitansiRef} style={{ background: '#fff' }}>
-            <div className="print-only print-kop">
+          <div ref={kwitansiRef} style={{ background: '#fff', padding: '20px 24px' }}>
+            <div className="print-only print-kop" style={{ paddingBottom: 16, marginBottom: 20 }}>
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>
                 <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
@@ -524,21 +524,21 @@ export function BayarTab({ p }) {
               </div>
             </div>
 
-            <div style={{ padding: '4px 2px 12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
+            <div style={{ padding: '4px 2px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
             </div>
 
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
+                <thead><tr><th style={{ padding: '10px 12px' }}>Item</th><th className="num" style={{ padding: '10px 12px' }}>Nominal</th></tr></thead>
                 <tbody>
-                  {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
+                  {kwitansi.items.map((it, i) => <tr key={i}><td style={{ padding: '10px 12px' }}>{it.nama}</td><td className="num" style={{ padding: '10px 12px' }}>{rp(it.nominal)}</td></tr>)}
                 </tbody>
                 <tfoot>
-                  <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
+                  <tr><td style={{ fontWeight: 700, padding: '10px 12px' }}>Total</td><td className="num" style={{ fontWeight: 700, padding: '10px 12px' }}>{rp(kwitansi.total)}</td></tr>
                 </tfoot>
               </table>
             </div>
