@@ -60,8 +60,14 @@ export async function POST(req) {
     }
     percobaanGagal.delete(ip);
 
+    // Cuma 2 role yang dipake: admin sama guru (wali kelas). Akun lama role 'staf' gak boleh login lagi.
+    if (!['admin', 'guru'].includes(row.role)) {
+      catatGagal(ip);
+      return NextResponse.json({ sukses: false, pesan: 'Username atau password salah' });
+    }
+
     const nama = row.nama || username;
-    const role = row.role || 'staf';
+    const role = row.role;
     const kelas = row.kelas || null;
     const token = signSession({ username, nama, role, kelas, ua });
     await setSessionCookie(token);

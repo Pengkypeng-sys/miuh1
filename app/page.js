@@ -28,7 +28,7 @@ export default function Home() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
   const [nama, setNama] = useState('');
-  const [role, setRole] = useState('staf');
+  const [role, setRole] = useState('guru');
   const [kelasGuru, setKelasGuru] = useState(null); // kelas terkunci buat role guru, null buat admin/staf
   const [lisensiExpired, setLisensiExpired] = useState(false);
   const [lisensiPesan, setLisensiPesan] = useState('');
@@ -543,7 +543,7 @@ export default function Home() {
 
   const visibleTabs = role === 'admin' ? ['rekap', 'bayar', 'siswa', 'item', 'kenaikan', 'kas', 'log', 'akun']
     : role === 'guru' ? ['bayar']
-    : ['rekap', 'bayar', 'kas', 'akun'];
+    : [];
   const meta = TAB_META[tab];
 
   // Satu bungkusan prop buat semua tab — daripada nulis puluhan prop manual per komponen.
