@@ -19,7 +19,7 @@ export function UserMenu({ nama, role, doLogout }) {
     <div className="user-menu no-print" ref={ref}>
       <div className="topbar-greeting">
         <div className="g-txt">{sapaanWaktu()}, <b>{nama.split(' ')[0]}</b> 👋</div>
-        <div className="g-role">{role === 'admin' ? 'Administrator' : 'Staf Pengajar'}</div>
+        <div className="g-role">{role === 'admin' ? 'Administrator' : 'Guru'}</div>
       </div>
       <button type="button" className="user-menu-trigger" onClick={() => setOpen(v => !v)}>
         <div className="avatar">{initials(nama)}</div>
@@ -36,7 +36,7 @@ export function UserMenu({ nama, role, doLogout }) {
           >
             <div className="user-menu-info">
               <div className="n">{nama}</div>
-              <div className="r">{role === 'admin' ? 'Administrator' : 'Staf Pengajar'}</div>
+              <div className="r">{role === 'admin' ? 'Administrator' : 'Guru'}</div>
             </div>
             <button type="button" className="user-menu-logout" onClick={doLogout}>
               <Icon name="logout" size={15} /> Logout
