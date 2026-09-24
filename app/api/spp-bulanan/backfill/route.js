@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError } from '@/lib/db';
+import { db, throwIfError, fetchAllLogAktivitas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { BULAN_LIST } from '@/lib/format';
@@ -16,7 +16,7 @@ export async function POST() {
 
   try {
     const [logRows, siswaRows] = await Promise.all([
-      db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru').limit(20000).then(r => throwIfError(r)),
+      fetchAllLogAktivitas('waktu, kelas, siswa, item, lama, baru'),
       db().from('siswa').select('id, nama, kelas').then(r => throwIfError(r)),
     ]);
 

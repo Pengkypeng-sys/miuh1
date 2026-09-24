@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError } from '@/lib/db';
+import { db, throwIfError, fetchAllLogAktivitas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -25,7 +25,7 @@ export async function GET(req) {
   }
 
   try {
-    const logRows = throwIfError(await db().from('log_aktivitas').select('waktu, kelas, siswa, item, lama, baru').limit(20000));
+    const logRows = await fetchAllLogAktivitas('waktu, kelas, siswa, item, lama, baru');
 
     const perKelasMap = {}; // kelas -> { total, siswaMap: { nama -> { total, tanggalTerakhir } } }
     let total = 0;

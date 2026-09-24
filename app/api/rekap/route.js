@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, KELAS_LIST } from '@/lib/db';
+import { db, throwIfError, KELAS_LIST, fetchAllLogAktivitas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE, DEMO_REKAP } from '@/lib/demoData';
@@ -69,7 +69,7 @@ export async function GET(req) {
     const [itemRows, siswaRows, logRows] = await Promise.all([
       db().from('item_pembayaran').select('*').order('urutan').then(r => throwIfError(r)),
       db().from('siswa').select('id, nama, kelas, created_at').in('kelas', kelasList).then(r => throwIfError(r)),
-      db().from('log_aktivitas').select('waktu, aksi, lama, baru').limit(20000).then(r => throwIfError(r)),
+      fetchAllLogAktivitas('waktu, aksi, lama, baru'),
     ]);
 
     const perKelas = kelasList.map(kelas => ({ kelas, totalSiswa: 0, lunasCount: 0, persenLunas: 0 }));

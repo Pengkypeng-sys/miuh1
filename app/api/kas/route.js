@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError } from '@/lib/db';
+import { db, throwIfError, fetchAllLogAktivitas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -145,7 +145,7 @@ export async function GET(req) {
 
   try {
     const [logRows, pengeluaranRows] = await Promise.all([
-      db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').limit(20000).then(r => throwIfError(r)),
+      fetchAllLogAktivitas('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode'),
       db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh, kategori').then(r => throwIfError(r)),
     ]);
 

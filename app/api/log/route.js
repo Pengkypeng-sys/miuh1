@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError } from '@/lib/db';
+import { fetchAllLogAktivitas } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -22,9 +22,8 @@ export async function GET(req) {
   const semua = tanggal === 'semua';
 
   try {
-    const rows = throwIfError(
-      await db().from('log_aktivitas').select('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode').order('waktu', { ascending: false }).limit(20000)
-    );
+    const rows = (await fetchAllLogAktivitas('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode'))
+      .sort((a, b) => (b.waktu || '').localeCompare(a.waktu || ''));
 
     let entries = rows
       .filter(r => r.waktu)
