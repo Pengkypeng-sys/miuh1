@@ -93,6 +93,18 @@ export async function GET(req) {
       const siswaIds = siswaRows.map(s => s.id);
       const pembayaranRows = await fetchAllRows('pembayaran', 'siswa_id, item_id, nominal, keterangan, terakhir_diisi', q => q.in('siswa_id', siswaIds));
 
+      const siswaKelasMap = Object.fromEntries(siswaRows.map(s => [s.id, s.kelas]));
+      // Item yang "udah dibuka" per kelas — minimal 1 siswa di kelas itu udah pernah nyetor.
+      // Item yang belum ada yang bayar (misal ujian akhir semester yang belum waktunya) gak ikut
+      // nge-block status "Lunas Semua", karena emang belum saatnya dibayar siapa pun.
+      const itemDibukaPerKelas = {}; // kelas -> Set(item_id)
+      pembayaranRows.forEach(p => {
+        const kelas = siswaKelasMap[p.siswa_id];
+        if (!kelas) return;
+        if (!itemDibukaPerKelas[kelas]) itemDibukaPerKelas[kelas] = new Set();
+        itemDibukaPerKelas[kelas].add(p.item_id);
+      });
+
       const paymentsBySiswa = {};
       pembayaranRows.forEach(p => {
         if (!paymentsBySiswa[p.siswa_id]) paymentsBySiswa[p.siswa_id] = {};
@@ -123,8 +135,17 @@ export async function GET(req) {
         perKelas[idx].totalSiswa++;
         const applicableItems = itemRows.filter(it => !it.kelas_scope || it.kelas_scope.includes(s.kelas));
         const pay = paymentsBySiswa[s.id] || {};
-        // Tabungan Wajib sifatnya nabung sukarela, bukan kewajiban — jangan ikut nentuin status "Lunas"
-        const itemsWajib = applicableItems.filter(it => it.nama !== 'TABUNGAN WAJIB');
+        // Tabungan Wajib sifatnya nabung sukarela, bukan kewajiban — jangan ikut nentuin status "Lunas".
+        // PPDB/BUKU dipecah jadi banyak baris varian (tiap gelombang/jenis kelamin/kelas buku) tapi 1 siswa
+        // cuma kepake 1 varian — jangan tuntut siswa "lunas" di varian ORANG LAIN yang emang gak dia pilih.
+        // Item yang belum ada satu pun siswa sekelas yang bayar (misal ujian akhir semester yang belum
+        // waktunya) juga gak dihitung — daripada 0% terus sepanjang tahun nunggu semua item "kebuka".
+        const itemDibuka = itemDibukaPerKelas[s.kelas] || new Set();
+        const itemsWajib = applicableItems.filter(it =>
+          it.nama !== 'TABUNGAN WAJIB'
+          && (!VARIAN_ITEMS.some(v => it.nama.startsWith(v)) || pay[it.id])
+          && itemDibuka.has(it.id)
+        );
         const semuaLunas = itemsWajib.length > 0 && itemsWajib.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');
         if (semuaLunas) perKelas[idx].lunasCount++;
 
