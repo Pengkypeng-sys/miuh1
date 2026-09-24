@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, throwIfError, fetchAllLogAktivitas } from '@/lib/db';
+import { db, throwIfError, fetchAllLogAktivitas, fetchAllRows } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { tanggalJakarta } from '@/lib/log';
 import { DEMO_MODE } from '@/lib/demoData';
@@ -143,9 +143,17 @@ export async function GET(req) {
   const semua = tanggal === 'semua';
   const modeBulan = /^\d{4}-\d{2}$/.test(tanggal); // 'YYYY-MM' — filter satu bulan penuh, bukan satu hari
 
+  // Trend 7 hari & rekap bulanan cuma butuh 6 bulan ke belakang — jangan narik SELURUH histori tiap
+  // buka Kas (tabel log_aktivitas cuma nambah gede terus, makin lambat kalau gak dibatesin tanggal).
+  // "Lihat Semua" tetep butuh histori penuh buat nampilin transaksi lama.
+  const enamBulanLalu = new Date();
+  enamBulanLalu.setMonth(enamBulanLalu.getMonth() - 6);
+  const cutoffIso = enamBulanLalu.toISOString();
+
   try {
     const [logRows, pengeluaranRows] = await Promise.all([
-      fetchAllLogAktivitas('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode'),
+      (semua || modeBulan) ? fetchAllLogAktivitas('waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode')
+        : fetchAllRows('log_aktivitas', 'waktu, user_name, aksi, kelas, siswa, item, lama, baru, metode', q => q.gte('waktu', cutoffIso)),
       db().from('pengeluaran').select('tanggal, keterangan, nominal, dicatat_oleh, kategori').then(r => throwIfError(r)),
     ]);
 

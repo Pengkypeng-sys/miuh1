@@ -16,9 +16,9 @@ Kelola SPP, PPDB, BUKU, dan pembayaran lainnya dari satu tempat — tanpa spread
 
 ## ✨ Kenapa dashboard ini
 
-Sekolah butuh catatan pembayaran yang **akurat, cepat, dan bisa dipantau siapa saja yang punya akses** — admin tata usaha, staf pengajar, sampai wali kelas — tanpa saling tunggu giliran buka satu file Excel yang sama.
+Sekolah butuh catatan pembayaran yang **akurat, cepat, dan bisa dipantau siapa saja yang punya akses** — admin tata usaha sampai wali kelas — tanpa saling tunggu giliran buka satu file Excel yang sama.
 
-- 🔒 **3 level akses** — admin (kontrol penuh), staf (input pembayaran), wali kelas (lihat status per kelas, gak bisa ubah data)
+- 🔒 **2 level akses** — admin (kontrol penuh) dan guru/wali kelas (read-only, lihat status per kelas gabungan, gak bisa ubah data)
 - 💰 **Pembayaran fleksibel** — dari item sekali bayar (PPDB, BUKU) sampai SPP bulanan dengan target beda per kelas dan pengecualian siswa yatim
 - 📊 **Rekap real-time** — status lunas/nyicil/belum langsung kelihatan, per kelas maupun per siswa, bisa diekspor ke Excel
 - 🧾 **Kwitansi & laporan siap cetak** — laporan bulanan format sekolah, kwitansi per transaksi, cetak per siswa
@@ -35,7 +35,7 @@ Sekolah butuh catatan pembayaran yang **akurat, cepat, dan bisa dipantau siapa s
 | **Kelola Data** | Tambah/hapus siswa, tambah jenis pembayaran baru (otomatis kepake semua kelas atau kelas tertentu), kenaikan kelas tahunan 1 klik |
 | **Rekap & Laporan** | Dashboard ringkasan seluruh kelas, tabel matriks siswa × item, drill-down per item & bulan, laporan bulanan format sekolah (Excel), export Excel siap cetak |
 | **Keuangan Harian** | Uang masuk otomatis dari pembayaran, uang keluar dicatat manual, saldo harian, trend 7 hari |
-| **Wali Kelas** | Akun read-only, langsung lihat semua siswa sekelas + status bayar, tanpa resiko kesalahan input |
+| **Wali Kelas** | Akun read-only, lihat siswa sekelas atau gabungan beberapa kelas sekaligus + status bayar + daftar item belum lunas, tanpa resiko kesalahan input |
 | **Keamanan** | Password ter-hash, session JWT, role dicek di server, lockout setelah percobaan login gagal berulang |
 | **Audit** | Log aktivitas lengkap — siapa, kapan, ubah apa dari nilai berapa ke berapa |
 
@@ -58,7 +58,7 @@ Sekolah butuh catatan pembayaran yang **akurat, cepat, dan bisa dipantau siapa s
 ## 🗄️ Struktur Database
 
 ```
-users              → akun login (admin / staf / guru), password ter-hash
+users              → akun login (admin / guru), password ter-hash
 siswa              → data siswa per kelas, flag "yatim" buat SPP gratis
 item_pembayaran    → daftar jenis pembayaran (SPP, PPDB, BUKU, dst), target harga, kelas_scope
 pembayaran         → nominal per siswa per item (kumulatif, bukan riwayat transaksi)
@@ -120,7 +120,7 @@ Coba tampilan tanpa data asli — set `DEMO_MODE=1` di `.env.local`. Gak ada tul
 
 ```
 username: admin   password: 1234   → role admin
-username: staf    password: 1234   → role staf
+username: guru     password: 1234   → role guru
 ```
 
 ---
@@ -151,6 +151,8 @@ app/
     kenaikan-kelas/     → naikkan seluruh siswa 1 tingkat
     log/                → riwayat aktivitas
     login/logout/session/ → autentikasi
+    account/            → ganti password akun sendiri
+    cron-backup/        → dipanggil Vercel Cron, backup mingguan otomatis
   page.js               → shell utama (state, routing tab)
 components/
   tabs/                 → 1 file per tab (Bayar, Rekap, Siswa, Item, Kas, Log, Kenaikan, Akun)

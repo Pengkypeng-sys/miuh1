@@ -66,10 +66,15 @@ export async function GET(req) {
   try {
     const kelasList = kelasFilter ? [kelasFilter] : KELAS_LIST;
 
+    // Trend bulanan (6 bulan) & total per tahun ajaran (5 tahun) gak pernah butuh lebih dari ~6 tahun
+    // ke belakang — batesin biar query gak makin berat tiap tahun ajaran nambah histori baru.
+    const enamTahunLalu = new Date();
+    enamTahunLalu.setFullYear(enamTahunLalu.getFullYear() - 6);
+
     const [itemRows, siswaRows, logRows] = await Promise.all([
       db().from('item_pembayaran').select('*').order('urutan').then(r => throwIfError(r)),
       db().from('siswa').select('id, nama, kelas, created_at').in('kelas', kelasList).then(r => throwIfError(r)),
-      fetchAllLogAktivitas('waktu, aksi, lama, baru'),
+      fetchAllRows('log_aktivitas', 'waktu, aksi, lama, baru', q => q.gte('waktu', enamTahunLalu.toISOString())),
     ]);
 
     const perKelas = kelasList.map(kelas => ({ kelas, totalSiswa: 0, lunasCount: 0, persenLunas: 0 }));
