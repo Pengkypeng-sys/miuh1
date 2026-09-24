@@ -58,6 +58,18 @@ export function RekapTab({ p }) {
     setLoadingDrilldown(false);
   }
 
+  function downloadCsvBayar() {
+    const bayarCocok = (rekap?.bayarHariIni || []).filter(b => !itemBayarFilter || b.item === itemBayarFilter);
+    const header = 'Kelas,Siswa,Item,Rp\n';
+    const rows = bayarCocok.map(b => [b.kelas, b.siswa, b.item, b.nominal].join(',')).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `bayar-${itemBayarFilter || 'semua'}-${tanggalBayarFilter || 'hari-ini'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function downloadCsvSiswa(items) {
     const header = ['Nama Siswa', ...items.map(it => it.nama)].join(',') + '\n';
     const rows = kelasDetail.siswa.map(s => [s.nama, ...items.map(it => Number(s.values[it.kolom]) || 0)].join(',')).join('\n');
@@ -521,16 +533,31 @@ export function RekapTab({ p }) {
                 value={tanggalBayarFilter ? ddmmyyyyToIso(tanggalBayarFilter) : new Date().toISOString().slice(0, 10)}
                 onChange={e => setTanggalBayarFilter(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
               />
+              <button className="secondary action-btn btn-icon" onClick={downloadCsvBayar}><Icon name="list" size={14} /> Download CSV</button>
             </div>
           </div>
-          <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
-            <table><thead><tr><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
-              <tbody>
-                {rekap && rekap.bayarHariIni.filter(b => !itemBayarFilter || b.item === itemBayarFilter).length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi tanggal ini</td></tr>}
-                {rekap?.bayarHariIni.filter(b => !itemBayarFilter || b.item === itemBayarFilter).map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
-              </tbody>
-            </table>
-          </div>
+          {(() => {
+            const bayarCocok = (rekap?.bayarHariIni || []).filter(b => !itemBayarFilter || b.item === itemBayarFilter);
+            const totalBayarCocok = bayarCocok.reduce((s, b) => s + b.nominal, 0);
+            return (
+              <>
+                <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+                  <table><thead><tr><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
+                    <tbody>
+                      {rekap && bayarCocok.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi tanggal ini</td></tr>}
+                      {bayarCocok.map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                {bayarCocok.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, padding: '10px 4px 0' }}>
+                    <span>Total {itemBayarFilter || 'Semua Item'}</span>
+                    <span>{rp(totalBayarCocok)}</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 

@@ -68,12 +68,6 @@ export function KasTab({ p }) {
               value={tanggalKas && tanggalKas !== 'semua' && !/^\d{4}-\d{2}$/.test(tanggalKas) ? ddmmyyyyToIso(tanggalKas) : ''}
               onChange={e => setTanggalKas(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
             />
-            <input
-              type="month"
-              title="Lihat per bulan"
-              value={/^\d{4}-\d{2}$/.test(tanggalKas) ? tanggalKas : ''}
-              onChange={e => setTanggalKas(e.target.value || '')}
-            />
             <button className={`secondary action-btn btn-icon ${tanggalKas === 'semua' ? 'active-toggle' : ''}`} onClick={() => setTanggalKas(tanggalKas === 'semua' ? '' : 'semua')}>
               <Icon name="list" size={14} /> {tanggalKas === 'semua' ? 'Kembali ke Hari Ini' : 'Lihat Semua'}
             </button>
