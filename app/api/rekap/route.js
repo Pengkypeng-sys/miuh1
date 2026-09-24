@@ -13,9 +13,11 @@ const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep
 function hitungTrenBulanan(logRows) {
   const perBulan = {}; // 'YYYY-MM' -> total
   logRows.forEach(r => {
-    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
-    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
-    if (delta <= 0) return;
+    if (!r.waktu) return;
+    const isHapus = r.aksi === 'hapus-pembayaran';
+    if (!isHapus && !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = isHapus ? -(Number(r.lama) || 0) : (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta === 0 || (!isHapus && delta < 0)) return;
     const { tanggal } = tanggalJakarta(new Date(r.waktu));
     const [dd, mm, yyyy] = tanggal.split('/');
     const key = `${yyyy}-${mm}`;
@@ -36,9 +38,11 @@ function hitungTrenBulanan(logRows) {
 function hitungTotalPerTahunAjaran(logRows) {
   const perTahunAjaran = {}; // "2025/2026" -> total
   logRows.forEach(r => {
-    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
-    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
-    if (delta <= 0) return;
+    if (!r.waktu) return;
+    const isHapus = r.aksi === 'hapus-pembayaran';
+    if (!isHapus && !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = isHapus ? -(Number(r.lama) || 0) : (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta === 0 || (!isHapus && delta < 0)) return;
     const { tanggal } = tanggalJakarta(new Date(r.waktu));
     const [dd, mm, yyyy] = tanggal.split('/').map(Number);
     const tahunAwal = mm >= 7 ? yyyy : yyyy - 1; // Juli-Desember masuk tahun ajaran yang dimulai tahun itu

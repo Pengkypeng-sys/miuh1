@@ -65,9 +65,11 @@ function rekapPerKategori(transaksiKeluar) {
 function hitungTrend7Hari(logRows, pengeluaranRows) {
   const perHari = {}; // 'YYYY-MM-DD' -> { masuk, keluar }
   logRows.forEach(r => {
-    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
-    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
-    if (delta <= 0) return;
+    if (!r.waktu) return;
+    const isHapus = r.aksi === 'hapus-pembayaran';
+    if (!isHapus && !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = isHapus ? -(Number(r.lama) || 0) : (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta === 0 || (!isHapus && delta < 0)) return;
     const key = tanggalJakarta(new Date(r.waktu)).tanggal.split('/').reverse().join('-');
     if (!perHari[key]) perHari[key] = { masuk: 0, keluar: 0 };
     perHari[key].masuk += delta;
@@ -96,9 +98,11 @@ const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep
 function hitungRekapBulanan(logRows, pengeluaranRows) {
   const perBulan = {}; // 'YYYY-MM' -> { masuk, keluar, perKategori }
   logRows.forEach(r => {
-    if (!r.waktu || !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
-    const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
-    if (delta <= 0) return;
+    if (!r.waktu) return;
+    const isHapus = r.aksi === 'hapus-pembayaran';
+    if (!isHapus && !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+    const delta = isHapus ? -(Number(r.lama) || 0) : (Number(r.baru) || 0) - (Number(r.lama) || 0);
+    if (delta === 0 || (!isHapus && delta < 0)) return;
     const { tanggal } = tanggalJakarta(new Date(r.waktu));
     const [dd, mm, yyyy] = tanggal.split('/');
     const key = `${yyyy}-${mm}`;
@@ -161,16 +165,20 @@ export async function GET(req) {
     let masuk = 0;
     logRows.forEach(r => {
       if (!r.waktu) return;
-      if (!['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
+      const isHapus = r.aksi === 'hapus-pembayaran';
+      if (!isHapus && !['submit-pembayaran', 'edit-manual', 'edit-langsung'].includes(r.aksi)) return;
       const { tanggal: tgl, jam } = tanggalJakarta(new Date(r.waktu));
       if (modeBulan) {
         const [dd, mm, yyyy] = tgl.split('/');
         if (`${yyyy}-${mm}` !== tanggal) return;
       } else if (!semua && tgl !== tanggal) return;
-      const delta = (Number(r.baru) || 0) - (Number(r.lama) || 0);
-      if (delta <= 0) return;
+      // Data yang dihapus harus ngurangin "uang masuk" balik — kalau kagak, uang yang udah dihapus
+      // (misal salah input terus dihapus) tetep keitung masuk selamanya.
+      const delta = isHapus ? -(Number(r.lama) || 0) : (Number(r.baru) || 0) - (Number(r.lama) || 0);
+      if (delta === 0) return;
+      if (!isHapus && delta < 0) return;
       masuk += delta;
-      transaksiMasuk.push({ tanggal: tgl, jam, user: r.user_name, kelas: r.kelas, siswa: r.siswa, item: r.item, nominal: delta, metode: r.metode || '-' });
+      transaksiMasuk.push({ tanggal: tgl, jam, user: r.user_name, kelas: r.kelas, siswa: r.siswa, item: isHapus ? `${r.item} (dihapus)` : r.item, nominal: delta, metode: r.metode || '-' });
     });
 
     const transaksiKeluar = [];

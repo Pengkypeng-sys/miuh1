@@ -85,6 +85,18 @@ export async function DELETE(req) {
   if (!KELAS_LIST.includes(kelas)) return NextResponse.json({ sukses: false, pesan: 'Kelas gak valid' });
 
   try {
+    // Sebelum dihapus, catat "hapus-pembayaran" buat tiap item yang udah dibayar siswa ini — biar Kas
+    // ngurangin balik "uang masuk"-nya, gak keitung masuk selamanya padahal siswanya udah dihapus.
+    const siswaRow = throwIfError(await db().from('siswa').select('id').eq('kelas', kelas).eq('nama', nama).maybeSingle());
+    if (siswaRow) {
+      const pembayaranRows = throwIfError(
+        await db().from('pembayaran').select('nominal, item_pembayaran(nama)').eq('siswa_id', siswaRow.id).gt('nominal', 0)
+      );
+      for (const p of pembayaranRows) {
+        await logAction(session.username, 'hapus-pembayaran', kelas, nama, p.item_pembayaran?.nama || '', p.nominal, '');
+      }
+    }
+
     // on delete cascade di tabel pembayaran — hapus siswa otomatis ikut hapus semua data pembayarannya
     const { error, count } = await db().from('siswa').delete({ count: 'exact' }).eq('kelas', kelas).eq('nama', nama);
     if (error) throw new Error(error.message);
