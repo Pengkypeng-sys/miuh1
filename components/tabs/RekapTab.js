@@ -15,9 +15,8 @@ export function RekapTab({ p }) {
     bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
   } = p;
 
-  const [cariPiutang, setCariPiutang] = useState('');
-  const [hanya30, setHanya30] = useState(false);
   const [itemDetailFilter, setItemDetailFilter] = useState([]); // [] = semua item; array of kolom (string)
+  const [itemBayarFilter, setItemBayarFilter] = useState(''); // '' = semua item, buat filter panel "Bayar"
   const [showItemFilter, setShowItemFilter] = useState(false);
   const [printModeSiswa, setPrintModeSiswa] = useState(false);
   const [siswaDicetak, setSiswaDicetak] = useState([]); // [] = ikut hasil search; kalau diisi, cetak cuma nama ini
@@ -512,64 +511,29 @@ export function RekapTab({ p }) {
               <div className="panel-title"><span className="ic-badge"><Icon name="clock" size={14} /></span> Bayar</div>
               <div className="panel-desc">Transaksi yang masuk tanggal terpilih</div>
             </div>
-            <input
-              type="date" className="no-print" style={{ width: 'auto' }}
-              value={tanggalBayarFilter ? ddmmyyyyToIso(tanggalBayarFilter) : new Date().toISOString().slice(0, 10)}
-              onChange={e => setTanggalBayarFilter(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
-            />
+            <div className="toolbar no-print">
+              <select style={{ width: 'auto', margin: 0 }} value={itemBayarFilter} onChange={e => setItemBayarFilter(e.target.value)}>
+                <option value="">Semua Item</option>
+                {[...new Set((rekap?.bayarHariIni || []).map(b => b.item))].sort().map(it => <option key={it} value={it}>{it}</option>)}
+              </select>
+              <input
+                type="date" style={{ width: 'auto' }}
+                value={tanggalBayarFilter ? ddmmyyyyToIso(tanggalBayarFilter) : new Date().toISOString().slice(0, 10)}
+                onChange={e => setTanggalBayarFilter(e.target.value ? isoToDdmmyyyy(e.target.value) : '')}
+              />
+            </div>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
             <table><thead><tr><th>Kelas</th><th>Siswa</th><th>Item</th><th className="num">Rp</th></tr></thead>
               <tbody>
-                {rekap && rekap.bayarHariIni.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi tanggal ini</td></tr>}
-                {rekap?.bayarHariIni.map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
+                {rekap && rekap.bayarHariIni.filter(b => !itemBayarFilter || b.item === itemBayarFilter).length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada transaksi tanggal ini</td></tr>}
+                {rekap?.bayarHariIni.filter(b => !itemBayarFilter || b.item === itemBayarFilter).map((b, i) => <tr key={i}><td>{b.kelas}</td><td>{b.siswa}</td><td>{b.item}</td><td className="num">{rp(b.nominal)}</td></tr>)}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <div className="panel-title"><span className="ic-badge"><Icon name="money" size={14} /></span> Piutang per Siswa</div>
-            <div className="panel-desc">Siswa yang belum lunas & sisa kekurangan bayar</div>
-          </div>
-          <div className="toolbar no-print">
-            <select style={{ width: 'auto', margin: 0 }} value={rekapKelasFilter} onChange={e => setRekapKelasFilter(e.target.value)}>
-              <option value="">Semua Kelas</option>
-              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
-            <input style={{ width: 'auto' }} placeholder="cari nama siswa..." value={cariPiutang} onChange={e => setCariPiutang(e.target.value)} />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={hanya30} onChange={e => setHanya30(e.target.checked)} /> {'>'}30 hari
-            </label>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table><thead><tr><th>Siswa</th><th>Kelas</th><th>Kurang di Item</th><th className="num">Total Kurang</th></tr></thead>
-            <tbody>
-              {rekap && rekap.piutang.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>Semua siswa udah lunas</td></tr>}
-              {rekap?.piutang.filter(pi => pi.siswa.toLowerCase().includes(cariPiutang.toLowerCase()) && (!hanya30 || pi.lewat30)).map((pi, i) => (
-                <tr key={i}>
-                  <td>{pi.siswa} {pi.lewat30 && <span className="status-chip belum" title="Terdaftar >30 hari, masih ada piutang">{'>'}30 hari</span>}</td>
-                  <td>{pi.kelas}</td>
-                  <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{pi.items.map(it => it.nama).join(', ')}</td>
-                  <td className="num" style={{ fontWeight: 700 }}>{rp(pi.kurang)}</td>
-                </tr>
-              ))}
-            </tbody>
-            {rekap && rekap.piutang.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={3} style={{ fontWeight: 700 }}>Total Piutang</td>
-                  <td className="num" style={{ fontWeight: 700 }}>{rp(rekap.piutang.reduce((s, pi) => s + pi.kurang, 0))}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
     </>
   );
 }
