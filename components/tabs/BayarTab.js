@@ -25,11 +25,14 @@ export function BayarTab({ p }) {
   const [tampilkanLunas, setTampilkanLunas] = useState(true);
   const [bukaKunci, setBukaKunci] = useState(new Set()); // kolom yang dibuka manual sama admin buat koreksi
   const [cariSiswaGuru, setCariSiswaGuru] = useState('');
+  const [itemFilterGuru, setItemFilterGuru] = useState([]); // [] = semua item; array of kolom (string)
+  const [showItemFilterGuru, setShowItemFilterGuru] = useState(false);
 
   // Wali kelas (role guru): akun read-only, cuma pilih kelas terus liat tabel semua siswa x status
   // lunas/belum lunas sekaligus — gak perlu klik satu-satu, gak ada akses input/edit pembayaran.
   if (role === 'guru') {
     const siswaCocok = kelasDetail?.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaGuru.toLowerCase())) || [];
+    const itemsShown = kelasDetail?.items.filter(it => itemFilterGuru.length === 0 || itemFilterGuru.includes(String(it.kolom))) || [];
     return (
       <div className="panel">
         <div className="panel-header">
@@ -37,7 +40,7 @@ export function BayarTab({ p }) {
             <div className="panel-title"><span className="ic-badge"><Icon name="students" size={14} /></span> Status Pembayaran Siswa — {kelas}</div>
             <div className="panel-desc">Semua siswa sekelas, status lunas/belum lunas per item</div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select style={{ width: 'auto', margin: 0 }} value={kelas} onChange={e => setKelas(e.target.value)}>
               {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
             </select>
@@ -46,8 +49,36 @@ export function BayarTab({ p }) {
               <option value="semua">Semua Bulan</option>
             </select>
             <input type="number" style={{ width: 90, margin: 0 }} value={tahunDetailPilih} onChange={e => setTahunDetailPilih(Number(e.target.value))} title="Tahun SPP yang ditampilin" />
+            {kelasDetail && (
+              <button className="secondary action-btn btn-icon" onClick={() => setShowItemFilterGuru(v => !v)}>
+                <Icon name="filter" size={14} /> {itemFilterGuru.length === 0 ? 'Semua Item' : `${itemFilterGuru.length} item dipilih`}
+              </button>
+            )}
           </div>
         </div>
+
+        {kelasDetail && showItemFilterGuru && (
+          <div style={{ padding: '10px 12px', marginBottom: 12, background: '#f8faf9', border: '1px solid #e2e8e5', borderRadius: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '4px 8px' }}>
+              {kelasDetail.items.map(it => (
+                <label key={it.kolom} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <input
+                    type="checkbox" style={{ flexShrink: 0 }}
+                    checked={itemFilterGuru.includes(String(it.kolom))}
+                    onChange={() => setItemFilterGuru(cur => {
+                      const k = String(it.kolom);
+                      return cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k];
+                    })}
+                  />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.nama}</span>
+                </label>
+              ))}
+            </div>
+            {itemFilterGuru.length > 0 && (
+              <button className="secondary action-btn" style={{ fontSize: 12, padding: '3px 10px', marginTop: 8 }} onClick={() => setItemFilterGuru([])}>Reset</button>
+            )}
+          </div>
+        )}
 
         <div className="search-box" style={{ margin: '12px 0' }}>
           <span className="search-ic"><Icon name="search" size={15} /></span>
@@ -61,17 +92,17 @@ export function BayarTab({ p }) {
               <thead>
                 <tr>
                   <th>Nama Siswa</th>
-                  {kelasDetail.items.map(it => <th key={it.kolom}>{it.nama}</th>)}
+                  {itemsShown.map(it => <th key={it.kolom}>{it.nama}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {siswaCocok.length === 0 && (
-                  <tr><td colSpan={kelasDetail.items.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
+                  <tr><td colSpan={itemsShown.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
                 )}
                 {siswaCocok.map(s => (
                   <tr key={s.nama}>
                     <td>{s.nama}</td>
-                    {kelasDetail.items.map(it => {
+                    {itemsShown.map(it => {
                       const val = Number(s.values[it.kolom]) || 0;
                       const ket = s.keterangan?.[it.kolom];
                       const target = targetSebenarnya(it.nama, ket, it.target);
