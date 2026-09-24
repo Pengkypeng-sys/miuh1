@@ -15,6 +15,15 @@ export function RekapTab({ p }) {
     bulanDetailPilih, setBulanDetailPilih, tahunDetailPilih, setTahunDetailPilih,
   } = p;
 
+  const [showKelasFilter, setShowKelasFilter] = useState(false);
+  const kelasDetailArr = kelasDetailPilih ? kelasDetailPilih.split(',') : [];
+  function toggleKelasDetail(k) {
+    setKelasDetailPilih(cur => {
+      const arr = cur ? cur.split(',') : [];
+      const next = arr.includes(k) ? arr.filter(x => x !== k) : [...arr, k];
+      return next.length ? next.join(',') : k; // minimal 1 kelas tetep kepilih
+    });
+  }
   const [itemDetailFilter, setItemDetailFilter] = useState([]); // [] = semua item; array of kolom (string)
   const [itemBayarFilter, setItemBayarFilter] = useState(''); // '' = semua item, buat filter panel "Bayar"
   const [showItemFilter, setShowItemFilter] = useState(false);
@@ -277,9 +286,9 @@ export function RekapTab({ p }) {
             <div className="panel-desc">Status pembayaran tiap siswa, per item</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <select className="no-print" style={{ width: 'auto', margin: 0 }} value={kelasDetailPilih} onChange={e => setKelasDetailPilih(e.target.value)}>
-              {kelasList.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
+            <button className="secondary action-btn btn-icon no-print" onClick={() => setShowKelasFilter(v => !v)}>
+              <Icon name="case" size={14} /> {kelasDetailArr.length <= 1 ? (kelasDetailArr[0] || 'Pilih Kelas') : `${kelasDetailArr.length} kelas dipilih`}
+            </button>
             <select className="no-print" style={{ width: 'auto', margin: 0 }} value={bulanDetailPilih} onChange={e => setBulanDetailPilih(e.target.value === 'semua' ? 'semua' : Number(e.target.value))} title="Bulan SPP yang ditampilin">
               {BULAN_LIST.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
               <option value="semua">Semua Bulan</option>
@@ -303,6 +312,20 @@ export function RekapTab({ p }) {
             {kelasDetail && <button className="secondary action-btn btn-icon no-print" onClick={cetakPerSiswa}><Icon name="receipt" size={14} /> Cetak per Siswa (1 lembar/siswa)</button>}
           </div>
         </div>
+
+        {showKelasFilter && (
+          <div className="no-print" style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)', borderRadius: 8 }}>
+            <div className="hint-text" style={{ marginTop: 0, marginBottom: 8 }}>Centang lebih dari 1 kelas buat gabungin datanya jadi 1 tabel</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '4px 8px' }}>
+              {kelasList.map(k => (
+                <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, margin: 0 }}>
+                  <input type="checkbox" checked={kelasDetailArr.includes(k)} onChange={() => toggleKelasDetail(k)} />
+                  {k}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {kelasDetail && showItemFilter && (
           <div className="no-print" style={{ padding: '10px 12px', marginBottom: 12, background: 'var(--bg-soft, #f8faf9)', border: '1px solid var(--border, #e2e8e5)', borderRadius: 8 }}>
@@ -355,7 +378,7 @@ export function RekapTab({ p }) {
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>
                 <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailPilih}{itemDetailFilter.length > 0 ? ` — ${itemsShown.map(it => it.nama).join(', ')}` : ''}</div>
+                <div className="print-kop-judul">Rekap Status Pembayaran — {kelasDetailArr.join(", ")}{itemDetailFilter.length > 0 ? ` — ${itemsShown.map(it => it.nama).join(', ')}` : ''}</div>
                 <div className="print-kop-tanggal">Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
@@ -363,16 +386,18 @@ export function RekapTab({ p }) {
               <thead>
                 <tr>
                   <th>Nama Siswa</th>
+                  {kelasDetailArr.length > 1 && <th>Kelas</th>}
                   {itemsShown.map(it => <th key={it.kolom}>{it.nama}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).length === 0 && (
-                  <tr><td colSpan={itemsShown.length + 1} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
+                  <tr><td colSpan={itemsShown.length + (kelasDetailArr.length > 1 ? 2 : 1)} style={{ textAlign: 'center', color: 'var(--muted)' }}>Tidak ada siswa yang cocok</td></tr>
                 )}
                 {kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase())).map(s => (
-                  <tr key={s.nama}>
+                  <tr key={`${s.kelas}-${s.nama}`}>
                     <td>{s.nama}</td>
+                    {kelasDetailArr.length > 1 && <td>{s.kelas}</td>}
                     {itemsShown.map(it => {
                       const val = Number(s.values[it.kolom]) || 0;
                       const ket = s.keterangan?.[it.kolom];
@@ -427,7 +452,7 @@ export function RekapTab({ p }) {
                   </div>
                   <div style={{ margin: '14px 0', fontSize: 13.5 }}>
                     <div><b>Nama</b>: {s.nama}</div>
-                    <div><b>Kelas</b>: {kelasDetailPilih}</div>
+                    <div><b>Kelas</b>: {kelasDetailArr.join(", ")}</div>
                   </div>
                   <table>
                     <thead><tr><th>Item</th><th className="num">Status</th><th className="num">Nominal</th></tr></thead>

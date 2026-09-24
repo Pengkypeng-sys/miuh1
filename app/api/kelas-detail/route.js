@@ -11,7 +11,8 @@ export async function GET(req) {
   if (!session) return NextResponse.json({ sukses: false, pesan: 'Belum login' }, { status: 401 });
 
   const params = new URL(req.url).searchParams;
-  const kelas = params.get('kelas');
+  const kelas = params.get('kelas'); // 1 kelas ("KELAS 1") ATAU gabungan dipisah koma ("KELAS 1,KELAS 3")
+  const kelasArr = kelas ? kelas.split(',') : [];
   const { tanggal } = tanggalJakarta();
   const semuaBulan = params.get('bulan') === 'semua';
   const bulanSpp = Number(params.get('bulan')) || Number(tanggal.split('/')[1]);
@@ -27,21 +28,26 @@ export async function GET(req) {
     return NextResponse.json({ items: DEMO_ITEMS, siswa });
   }
 
-  if (!KELAS_LIST.includes(kelas) || !kelasDiizinkan(session, kelas)) return NextResponse.json({ items: [], siswa: [] });
+  if (kelasArr.length === 0 || !kelasArr.every(k => KELAS_LIST.includes(k) && kelasDiizinkan(session, k))) {
+    return NextResponse.json({ items: [], siswa: [] });
+  }
 
   try {
     const itemRows = throwIfError(await db().from('item_pembayaran').select('*').order('urutan'));
-    const target = await targetSppKelas(kelas);
+    // Target SPP bisa beda per kelas — kalau gabungan kelas dipilih, ambil semua target-nya sekaligus,
+    // 1 kolom SPP tetep dipakai bareng tapi target ditentuin per-siswa dari kelas siswa itu sendiri.
+    const targetPerKelas = Object.fromEntries(await Promise.all(kelasArr.map(async k => [k, await targetSppKelas(k)])));
+    const targetContoh = targetPerKelas[kelasArr[0]];
     // SPP normal: 1 kolom sesuai bulan/tahun yang dipilih. Mode "semua bulan": 12 kolom sekaligus.
     const items = itemRows
-      .filter(it => !it.kelas_scope || it.kelas_scope.includes(kelas))
+      .filter(it => !it.kelas_scope || kelasArr.some(k => it.kelas_scope.includes(k)))
       .flatMap(it => {
         if (it.nama !== 'SPP') return [{ nama: it.nama, kolom: it.id, target: it.target }];
-        if (semuaBulan) return BULAN_LIST.map((b, i) => ({ nama: `SPP ${b}`, kolom: `spp-${i + 1}`, target }));
-        return [{ nama: `SPP ${BULAN_LIST[bulanSpp - 1] || ''}`, kolom: 'spp', target }];
+        if (semuaBulan) return BULAN_LIST.map((b, i) => ({ nama: `SPP ${b}`, kolom: `spp-${i + 1}`, target: targetContoh }));
+        return [{ nama: `SPP ${BULAN_LIST[bulanSpp - 1] || ''}`, kolom: 'spp', target: targetContoh }];
       });
 
-    const siswaRows = throwIfError(await db().from('siswa').select('id, nama, yatim').eq('kelas', kelas));
+    const siswaRows = throwIfError(await db().from('siswa').select('id, nama, kelas, yatim').in('kelas', kelasArr));
     if (siswaRows.length === 0) return NextResponse.json({ items, siswa: [] });
 
     const siswaIds = siswaRows.map(s => s.id);
@@ -71,20 +77,22 @@ export async function GET(req) {
     const siswa = siswaRows
       .map(s => {
         const pay = bySiswa[s.id] || {};
+        const targetSiswa = targetPerKelas[s.kelas] ?? targetContoh;
         return {
           nama: s.nama,
+          kelas: s.kelas,
           values: Object.fromEntries(items.map(it => {
             if (typeof it.kolom === 'string' && it.kolom.startsWith('spp-')) {
               const bulanKe = Number(it.kolom.slice(4));
-              return [it.kolom, s.yatim ? target : (sppBySiswa[s.id]?.[bulanKe] ?? '')];
+              return [it.kolom, s.yatim ? targetSiswa : (sppBySiswa[s.id]?.[bulanKe] ?? '')];
             }
-            if (it.kolom === 'spp') return [it.kolom, s.yatim ? target : (sppBySiswa[s.id] ?? '')];
+            if (it.kolom === 'spp') return [it.kolom, s.yatim ? targetSiswa : (sppBySiswa[s.id] ?? '')];
             return [it.kolom, pay[it.kolom]?.nominal ?? ''];
           })),
           keterangan: Object.fromEntries(items.map(it => [it.kolom, pay[it.kolom]?.keterangan || ''])),
         };
       })
-      .sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
+      .sort((a, b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama, 'id'));
 
     return NextResponse.json({ items, siswa });
   } catch (e) {
