@@ -477,45 +477,49 @@ export function BayarTab({ p }) {
         )}
       </div>
 
-      {kwitansi && (
-        <div className="panel panel-print" style={{ gridColumn: 2 }}>
-          <div className="panel-header no-print">
-            <div>
-              <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
-              <div className="panel-desc">{kwitansi.siswa} — {kwitansi.kelas}</div>
-            </div>
-            <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>
+      <div className="panel panel-print" style={{ gridColumn: 2 }}>
+        <div className="panel-header no-print">
+          <div>
+            <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
+            <div className="panel-desc">{kwitansi ? `${kwitansi.siswa} — ${kwitansi.kelas}` : 'Belum ada transaksi disimpan sesi ini'}</div>
           </div>
-
-          <div className="print-only print-kop">
-            <img src="/logo-mi.png" alt="" className="print-kop-logo" />
-            <div>
-              <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
-              <div className="print-kop-judul">Kwitansi Pembayaran</div>
-              <div className="print-kop-tanggal">{kwitansi.waktu}</div>
-            </div>
-          </div>
-
-          <div style={{ padding: '4px 2px 12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
-              <tbody>
-                {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
-              </tbody>
-              <tfoot>
-                <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
-              </tfoot>
-            </table>
-          </div>
+          {kwitansi && <button className="secondary action-btn btn-icon" onClick={() => window.print()}><Icon name="receipt" size={14} /> Cetak Kwitansi</button>}
         </div>
-      )}
+
+        {!kwitansi && <div className="empty-state no-print">Belum ada kwitansi — muncul otomatis abis simpan pembayaran</div>}
+
+        {kwitansi && (
+          <>
+            <div className="print-only print-kop">
+              <img src="/logo-mi.png" alt="" className="print-kop-logo" />
+              <div>
+                <div className="print-kop-sekolah">MI Unwanul Huda 1</div>
+                <div className="print-kop-judul">Kwitansi Pembayaran</div>
+                <div className="print-kop-tanggal">{kwitansi.waktu}</div>
+              </div>
+            </div>
+
+            <div style={{ padding: '4px 2px 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Nama Siswa</span><b>{kwitansi.siswa}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Kelas</span><b>{kwitansi.kelas}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 4 }}><span>Metode</span><b>{kwitansi.metode}</b></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, marginBottom: 10 }}><span>Diterima Oleh</span><b>{kwitansi.petugas}</b></div>
+            </div>
+
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Item</th><th className="num">Nominal</th></tr></thead>
+                <tbody>
+                  {kwitansi.items.map((it, i) => <tr key={i}><td>{it.nama}</td><td className="num">{rp(it.nominal)}</td></tr>)}
+                </tbody>
+                <tfoot>
+                  <tr><td style={{ fontWeight: 700 }}>Total</td><td className="num" style={{ fontWeight: 700 }}>{rp(kwitansi.total)}</td></tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

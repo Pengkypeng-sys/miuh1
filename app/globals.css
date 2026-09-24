@@ -91,7 +91,7 @@
     height: 100vh;
   }
   .sidebar-brand { @apply flex items-center gap-2.5 px-2 pt-1.5 pb-6; }
-  .sidebar-brand .logo-img { @apply w-9 h-9 object-contain flex-shrink-0 rounded-full bg-white; }
+  .sidebar-brand .logo-img { @apply w-9 h-9 object-contain flex-shrink-0 rounded-full bg-white/10 p-0.5; }
   .sidebar-brand div { @apply font-bold text-white text-[13.5px] leading-snug; }
   .sidebar-brand small { @apply text-on-primary-container font-normal text-[11px]; }
   .nav-section-label { @apply text-[10.5px] font-bold tracking-wider text-on-primary-container/70 uppercase px-3 pb-2 pt-1; }
