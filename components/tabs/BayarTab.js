@@ -614,7 +614,7 @@ export function BayarTab({ p }) {
       {showKwitansiPopup && kwitansi && (
         <div className="confirm-backdrop" onClick={() => setShowKwitansiPopup(false)}>
           <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
-            <div className="confirm-icon"><Icon name="receipt" size={22} /></div>
+            <div className="confirm-icon"><img src="/logo-mi.png" alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} /></div>
             <h3>Pembayaran Tersimpan</h3>
             <p>Kwitansi {kwitansi.siswa} udah siap — mau langsung didownload?</p>
             <div className="confirm-actions">
