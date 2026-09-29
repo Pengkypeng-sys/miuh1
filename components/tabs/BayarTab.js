@@ -131,7 +131,7 @@ export function BayarTab({ p }) {
 
         {loadingDetail && <div className="hint-text">Memuat...</div>}
         {!loadingDetail && kelasDetail && (
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ maxHeight: 600, overflowY: 'auto' }}>
             <table className="matrix-table">
               <thead>
                 <tr>
@@ -178,8 +178,9 @@ export function BayarTab({ p }) {
   }
 
   return (
-    <div className="bayar-grid">
-      <div className="panel" style={{ gridRow: 'span 2' }}>
+    <div className="bayar-grid" style={{ alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="panel">
         <div className="panel-title"><span className="ic-badge"><Icon name="edit" size={14} /></span> Input Pembayaran</div>
         <div className="panel-desc">Centang item yang dibayar (bisa lebih dari 1), isi nominalnya, pilih metode</div>
 
@@ -203,7 +204,7 @@ export function BayarTab({ p }) {
         <hr className="field-divider" />
 
         <label>Item yang Dibayar <span style={{ fontWeight: 'normal', color: 'var(--muted)' }}>(nominal &lt;1000 otomatis dikali 1000)</span></label>
-        <div className="checkout-list">
+        <div className="checkout-list" style={{ maxHeight: 480, overflowY: 'auto' }}>
           <div className="checkout-row">
             <label className="checkout-check">
               <input type="checkbox" checked={ppdbOn} onChange={e => { setPpdbOn(e.target.checked); if (!e.target.checked) { setPpdbGel(''); setPpdbGender(''); setPpdbNominal(''); } }} />
@@ -402,7 +403,9 @@ export function BayarTab({ p }) {
         </button>
         {statusBayar && <div className={`status ${statusBayar.sukses ? 'sukses' : 'gagal'}`}>{statusBayar.pesan}</div>}
       </div>
+      </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div className="panel">
         <div className="panel-header">
           <div>
@@ -441,7 +444,7 @@ export function BayarTab({ p }) {
             return hitungStatus(Number(itemValues[i.kolom]) || 0, target) !== 'lunas';
           });
           return (
-            <div className="table-wrap">
+            <div className="table-wrap" style={{ maxHeight: 480, overflowY: 'auto' }}>
               <table className="matrix-table" style={{ tableLayout: 'auto' }}>
                 <thead>
                   <tr><th>Item</th><th>Status</th><th className="num">Dibayar</th><th className="num">Target</th><th className="num">Sisa</th></tr>
@@ -518,7 +521,7 @@ export function BayarTab({ p }) {
         )}
       </div>
 
-      <div className="panel panel-print kwitansi-print" style={{ gridColumn: 2 }}>
+      <div className="panel panel-print kwitansi-print">
         <div className="panel-header no-print">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="receipt" size={14} /></span> Kwitansi Terakhir</div>
@@ -604,6 +607,7 @@ export function BayarTab({ p }) {
             </div>
           </div>
         )}
+      </div>
       </div>
 
       {showKwitansiPopup && kwitansi && (

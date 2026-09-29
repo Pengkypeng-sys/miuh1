@@ -373,7 +373,7 @@ export function RekapTab({ p }) {
             : kelasDetail.siswa.filter(s => s.nama.toLowerCase().includes(cariSiswaDetail.toLowerCase()));
           return (
           <>
-          <div className={`table-wrap ${printModeSiswa ? 'hide-in-print' : ''}`}>
+          <div className={`table-wrap ${printModeSiswa ? 'hide-in-print' : ''}`} style={{ maxHeight: 600, overflowY: 'auto' }}>
             <div className="print-only print-kop">
               <img src="/logo-mi.png" alt="" className="print-kop-logo" />
               <div>

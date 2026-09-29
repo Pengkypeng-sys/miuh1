@@ -241,7 +241,7 @@ export function ItemTab({ p }) {
           return (
             <div key={kat} style={{ marginBottom: 14 }}>
               <div className="kategori-label">{kat}</div>
-              <div className="item-manage-list">
+              <div className="item-manage-list" style={{ maxHeight: 360, overflowY: 'auto' }}>
                 {normalItems.map(i => (
                   <ItemRow key={i.kolom} i={i} idxFlat={itemList.findIndex(x => x.nama === i.nama)} itemList={itemList} {...rowProps} />
                 ))}

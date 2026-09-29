@@ -49,20 +49,28 @@ export function SiswaTab({ p }) {
           <input value={cariSiswaKelola} onChange={e => setCariSiswaKelola(e.target.value)} placeholder="cari nama siswa..." />
         </div>
 
-        <div className="siswa-list">
-          {siswaHapusList.length === 0 && <div className="empty-state">Belum ada siswa di kelas ini</div>}
-          {siswaHapusList.filter(s => s.toLowerCase().includes(cariSiswaKelola.toLowerCase())).map(s => {
-            const yatim = siswaDetailList.find(d => d.nama === s)?.yatim || false;
-            return (
-              <div key={s} className={`siswa-list-row ${s === siswaHapus ? 'selected' : ''}`} onClick={() => setSiswaHapus(s)}>
-                <div className="avatar-sm">{initials(s)}</div>
-                <div className="nm">{s}</div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400, marginLeft: 'auto' }} onClick={e => e.stopPropagation()}>
-                  <input type="checkbox" checked={yatim} onChange={e => toggleYatim(s, e.target.checked)} /> Yatim (SPP gratis)
-                </label>
-              </div>
-            );
-          })}
+        <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+          <table className="matrix-table" style={{ tableLayout: 'auto' }}>
+            <thead><tr><th style={{ textAlign: 'left' }}>Nama Siswa</th><th>Yatim (SPP Gratis)</th></tr></thead>
+            <tbody>
+              {siswaHapusList.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)' }}>Belum ada siswa di kelas ini</td></tr>}
+              {siswaHapusList.filter(s => s.toLowerCase().includes(cariSiswaKelola.toLowerCase())).map(s => {
+                const yatim = siswaDetailList.find(d => d.nama === s)?.yatim || false;
+                return (
+                  <tr key={s} className={s === siswaHapus ? 'selected' : ''} onClick={() => setSiswaHapus(s)} style={{ cursor: 'pointer' }}>
+                    <td style={{ textAlign: 'left' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="avatar-sm">{initials(s)}</span> {s}
+                      </span>
+                    </td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={yatim} onChange={e => toggleYatim(s, e.target.checked)} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

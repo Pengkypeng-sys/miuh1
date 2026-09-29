@@ -55,8 +55,9 @@ export function KasTab({ p }) {
   }
 
   return (
-    <div className="bayar-grid">
-      <div className="panel panel-print" style={{ gridRow: 'span 2' }}>
+    <div className="bayar-grid" style={{ alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="panel panel-print">
         <div className="panel-header">
           <div>
             <div className="panel-title"><span className="ic-badge"><Icon name="wallet" size={14} /></span> {tanggalKas === 'semua' ? 'Kas Semua Tanggal' : kas?.modeBulan ? 'Kas per Bulan' : 'Kas Hari Ini'}</div>
@@ -135,7 +136,7 @@ export function KasTab({ p }) {
             )}
 
             <div className="subsection-title">Rekap Setoran per Item</div>
-            <div className="table-wrap" style={{ marginBottom: 20 }}>
+            <div className="table-wrap" style={{ marginBottom: 20, maxHeight: 360, overflowY: 'auto' }}>
               <table>
                 <thead><tr><th>Item</th><th className="num">Jumlah Orang</th><th className="num">Total Rp</th><th className="num">%</th></tr></thead>
                 <tbody>
@@ -215,7 +216,9 @@ export function KasTab({ p }) {
           </>
         )}
       </div>
+      </div>
 
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {role === 'admin' && (
         <div className="panel no-print">
           <div className="panel-title"><span className="ic-badge"><Icon name="minus" size={14} /></span> Catat Pengeluaran</div>
@@ -328,6 +331,7 @@ export function KasTab({ p }) {
           </div>
         </div>
       )}
+      </div>
 
     </div>
   );
