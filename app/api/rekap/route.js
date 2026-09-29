@@ -147,7 +147,7 @@ export async function GET(req) {
         const itemDibuka = itemDibukaPerKelas[s.kelas] || new Set();
         const itemsWajib = applicableItems.filter(it =>
           it.nama !== 'TABUNGAN WAJIB'
-          && (!VARIAN_ITEMS.some(v => it.nama.startsWith(v)) || pay[it.id])
+          && (!(it.nama.startsWith('PPDB') || /^BUKU \d/.test(it.nama)) || pay[it.id])
           && itemDibuka.has(it.id)
         );
         const semuaLunas = itemsWajib.length > 0 && itemsWajib.every(it => hitungStatus(pay[it.id]?.nominal ?? '', it.target) === 'lunas');

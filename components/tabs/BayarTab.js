@@ -1,9 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
-import { motion } from 'motion/react';
 import { Icon } from '@/lib/icons';
 import { hitungStatus } from '@/lib/target';
-import { BarFill } from '@/components/BarFill';
 import {
   rp, rpSigned, rpSingkat, formatRibuan, targetSebenarnya,
   BULAN_LIST, BUKU_KELAS_MAP, PPDB_HARGA_ACUAN, BUKU_HARGA_ACUAN,
@@ -341,7 +339,7 @@ export function BayarTab({ p }) {
           </div>
 
           <div className="checkout-grid">
-          {itemList.filter(i => !i.nama.startsWith('PPDB') && !i.nama.startsWith('BUKU') && i.nama !== 'SPP' && i.nama !== 'TABUNGAN WAJIB').map(i => {
+          {itemList.filter(i => !i.nama.startsWith('PPDB') && !/^BUKU \d/.test(i.nama) && i.nama !== 'SPP' && i.nama !== 'TABUNGAN WAJIB').map(i => {
             const checked = checkedItems.has(i.kolom);
             const val = Number(itemValues[i.kolom]) || 0;
             const status = hitungStatus(val, i.target);
@@ -431,54 +429,51 @@ export function BayarTab({ p }) {
             {[0, 1, 2].map(k => <div key={k} className="skeleton-row" />)}
           </div>
         )}
-        {!loadingRingkasan && <motion.div className="item-status-list" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.035 } } }}>
-          {itemList.filter(i => {
+        {!loadingRingkasan && (() => {
+          const rows = itemList.filter(i => {
             // Item varian PPDB/BUKU (6+3 kemungkinan) cuma ditampilin kalau siswa ini emang punya
             // catatan bayar di varian itu — kalau semua ditampilin defaultnya numpuk 9 baris "belum bayar".
-            const isVarian = i.nama.startsWith('PPDB') || i.nama.startsWith('BUKU');
+            const isVarian = i.nama.startsWith('PPDB') || /^BUKU \d/.test(i.nama);
             if (isVarian && !(Number(itemValues[i.kolom]) > 0)) return false;
             if (tampilkanLunas) return true;
             const ket = itemValues.__keterangan?.[i.kolom];
             const target = targetSebenarnya(i.nama, ket, i.target);
             return hitungStatus(Number(itemValues[i.kolom]) || 0, target) !== 'lunas';
-          }).map(i => {
-            const val = Number(itemValues[i.kolom]) || 0;
-            const ket = itemValues.__keterangan?.[i.kolom];
-            const target = targetSebenarnya(i.nama, ket, i.target);
-            const status = hitungStatus(val, target);
-            const pct = target ? Math.min(100, Math.round((val / target) * 100)) : (val ? 100 : 0);
-            const sisa = target ? val - target : null;
-            return (
-              <motion.div
-                key={i.kolom} className={`item-status-row ${String(i.kolom) === String(kolom) ? 'selected' : ''}`} onClick={() => setKolom(i.kolom)}
-                variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0 } }}
-                whileTap={{ scale: 0.985 }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="nm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {status !== 'belum' && <span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : 'Nyicil'}</span>}
-                      <span className={`val ${status === 'lunas' ? 'paid' : 'unpaid'}`}>
-                        {val ? rp(val) : 'Belum bayar'}{target ? `${val ? ' / ' : ' / '}${rp(target)}` : ''}
-                      </span>
-                    </span>
-                  </div>
-                  {status === 'cicil' && (
-                    <>
-                      <div style={{ marginTop: 6, height: 6 }}>
-                        <BarFill pct={pct} color="var(--gold)" />
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>
-                        Sisa {rpSigned(sisa)}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>}
+          });
+          return (
+            <div className="table-wrap">
+              <table className="matrix-table" style={{ tableLayout: 'auto' }}>
+                <thead>
+                  <tr><th>Item</th><th>Status</th><th className="num">Dibayar</th><th className="num">Target</th><th className="num">Sisa</th></tr>
+                </thead>
+                <tbody>
+                  {rows.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>Gak ada item yang cocok</td></tr>}
+                  {rows.map(i => {
+                    const val = Number(itemValues[i.kolom]) || 0;
+                    const ket = itemValues.__keterangan?.[i.kolom];
+                    const target = targetSebenarnya(i.nama, ket, i.target);
+                    const status = hitungStatus(val, target);
+                    const sisa = target ? target - val : null;
+                    return (
+                      <tr
+                        key={i.kolom} className={String(i.kolom) === String(kolom) ? 'selected' : ''}
+                        onClick={() => setKolom(i.kolom)} style={{ cursor: 'pointer' }}
+                      >
+                        <td>{i.nama}{ket ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({ket})</span> : ''}</td>
+                        <td><span className={`status-chip ${status}`}>{status === 'lunas' ? 'Lunas' : status === 'cicil' ? 'Nyicil' : 'Belum'}</span></td>
+                        <td className="num">{rp(val)}</td>
+                        <td className="num">{target ? rp(target) : '—'}</td>
+                        <td className="num" style={{ color: sisa > 0 ? 'var(--gold)' : sisa < 0 ? 'var(--primary)' : undefined, fontWeight: sisa ? 600 : 400 }}>
+                          {sisa ? rpSigned(sisa) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {role === 'admin' && siswa && kolom && Number(itemValues[kolom]) > 0 && (
           <div className="fix-actions">
